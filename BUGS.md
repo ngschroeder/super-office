@@ -1,0 +1,2 @@
+1. When editing a document, the cursor renders behind the on screen keyboard keys. It should be over.
+2. The "Open File" screen, the ordering of files is a lettered list instead of numbered list, and starts with "b". (b,c,d,e,f,etc...)

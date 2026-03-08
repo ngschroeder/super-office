@@ -395,11 +395,11 @@ _kbd_write_key_rows:
 @r0_top:
     lda #KBD16_TL
     sta VMDATAL.w
-    lda #$20                     ; Priority=1, PPP=0
+    lda #$00                     ; Priority=0, PPP=0
     sta VMDATAH.w
     lda #KBD16_TR
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     dex
     bne @r0_top
@@ -419,13 +419,13 @@ _kbd_write_key_rows:
     lda kbd_tile_lo_row0.w,Y    ; BL tile index
     sta $00                      ; save BL
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     lda $00
     clc
     adc #1                       ; BR = BL + 1
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     iny
     cpy #KBD_COLS
@@ -438,13 +438,13 @@ _kbd_write_key_rows:
     lda kbd_tile_hi_row0.w,Y
     sta $00
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     lda $00
     clc
     adc #1
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     iny
     cpy #KBD_COLS
@@ -464,11 +464,11 @@ _kbd_write_key_rows:
 @r1_top:
     lda #KBD16_TL
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     lda #KBD16_TR
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     dex
     bne @r1_top
@@ -488,13 +488,13 @@ _kbd_write_key_rows:
     lda kbd_tile_lo_row1.w,Y
     sta $00
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     lda $00
     clc
     adc #1
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     iny
     cpy #KBD_COLS
@@ -507,13 +507,13 @@ _kbd_write_key_rows:
     lda kbd_tile_hi_row1.w,Y
     sta $00
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     lda $00
     clc
     adc #1
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     iny
     cpy #KBD_COLS
@@ -533,11 +533,11 @@ _kbd_write_key_rows:
 @r2_top:
     lda #KBD16_TL
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     lda #KBD16_TR
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     dex
     bne @r2_top
@@ -557,13 +557,13 @@ _kbd_write_key_rows:
     lda kbd_tile_lo_row2.w,Y
     sta $00
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     lda $00
     clc
     adc #1
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     iny
     cpy #KBD_COLS
@@ -576,13 +576,13 @@ _kbd_write_key_rows:
     lda kbd_tile_hi_row2.w,Y
     sta $00
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     lda $00
     clc
     adc #1
     sta VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     iny
     cpy #KBD_COLS
@@ -603,7 +603,7 @@ _kbd_write_key_rows:
     ldx #6
 @spc_t_blank_l:
     stz VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     dex
     bne @spc_t_blank_l
@@ -611,7 +611,7 @@ _kbd_write_key_rows:
     ; SPC_TL (1 tile, left cap)
     lda #KBD16_SPC_TL
     sta VMDATAL.w
-    lda #$2C                     ; Priority=1, PPP=3 (spacebar palette)
+    lda #$0C                     ; Priority=0, PPP=3 (spacebar palette)
     sta VMDATAH.w
 
     ; SPC_TM (18 tiles, middle)
@@ -619,7 +619,7 @@ _kbd_write_key_rows:
 @spc_t_mid:
     lda #KBD16_SPC_TM
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
     dex
     bne @spc_t_mid
@@ -627,14 +627,14 @@ _kbd_write_key_rows:
     ; SPC_TR (1 tile, right cap)
     lda #KBD16_SPC_TR
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
 
     ; 6 blank tiles (right margin: key cols 13-15 = tile cols 26-31)
     ldx #6
 @spc_t_blank_r:
     stz VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     dex
     bne @spc_t_blank_r
@@ -652,7 +652,7 @@ _kbd_write_key_rows:
     ldx #6
 @spc_b_blank_l:
     stz VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     dex
     bne @spc_b_blank_l
@@ -660,7 +660,7 @@ _kbd_write_key_rows:
     ; SPC_BL (left cap)
     lda #KBD16_SPC_BL
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
 
     ; 5 blank middle tiles
@@ -668,7 +668,7 @@ _kbd_write_key_rows:
 @spc_b_mid1:
     lda #KBD16_SPC_BM
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
     dex
     bne @spc_b_mid1
@@ -676,23 +676,23 @@ _kbd_write_key_rows:
     ; "SPACE" letters (5 tiles)
     lda #KBD16_SPC_S
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
     lda #KBD16_SPC_P
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
     lda #KBD16_SPC_A
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
     lda #KBD16_SPC_C
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
     lda #KBD16_SPC_E
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
 
     ; 7 blank middle tiles
@@ -700,7 +700,7 @@ _kbd_write_key_rows:
 @spc_b_mid2:
     lda #KBD16_SPC_BM
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
     dex
     bne @spc_b_mid2
@@ -708,14 +708,14 @@ _kbd_write_key_rows:
     ; SPC_BR (right cap)
     lda #KBD16_SPC_BR
     sta VMDATAL.w
-    lda #$2C
+    lda #$0C
     sta VMDATAH.w
 
     ; 6 blank tiles
     ldx #6
 @spc_b_blank_r:
     stz VMDATAL.w
-    lda #$20
+    lda #$00
     sta VMDATAH.w
     dex
     bne @spc_b_blank_r
@@ -748,13 +748,13 @@ _kbd_apply_shift_pal:
     .ACCU 8
     lda #KBD16_TL
     sta VMDATAL.w
-    lda #$28                     ; Priority=1, PPP=2 (shift palette)
+    lda #$08                     ; Priority=0, PPP=2 (shift palette)
     sta VMDATAH.w
 
     ; TR at row 24, col 1
     lda #KBD16_TR
     sta VMDATAL.w                ; VMAIN auto-incremented to col 1
-    lda #$28
+    lda #$08
     sta VMDATAH.w
 
     ; BL at row 25, col 0
@@ -766,13 +766,13 @@ _kbd_apply_shift_pal:
     .ACCU 8
     lda #204                     ; ↑ shift BL tile
     sta VMDATAL.w
-    lda #$28
+    lda #$08
     sta VMDATAH.w
 
     ; BR at row 25, col 1
     lda #205                     ; ↑ shift BR tile
     sta VMDATAL.w
-    lda #$28
+    lda #$08
     sta VMDATAH.w
 
 @no_shift:
@@ -827,7 +827,7 @@ _kbd_update_highlight:
 
     ; --- Unhighlight regular key (rows 0-2): 4 VRAM writes ---
     ; Determine attribute for old position
-    lda #$20                     ; Priority=1, PPP=0 (normal)
+    lda #$00                     ; Priority=0, PPP=0 (normal)
     ; Check if old position is SHIFT key (row 2, col 0) AND shift active
     ldx kbd_old_row.w
     cpx #$02
@@ -836,7 +836,7 @@ _kbd_update_highlight:
     bne @old_attr_ok
     ldx kbd_shift.w
     beq @old_attr_ok
-    lda #$28                     ; Priority=1, PPP=2 (shift palette)
+    lda #$08                     ; Priority=0, PPP=2 (shift palette)
 @old_attr_ok:
     sta $0A                      ; $0A = old attribute byte
 
@@ -1022,7 +1022,7 @@ _kbd_update_highlight:
     .ACCU 8
     lda #KBD16_TL
     sta vram_wq_data+2.w,X
-    lda #$24                     ; Priority=1, PPP=1 (hover)
+    lda #$04                     ; Priority=0, PPP=1 (hover)
     sta vram_wq_data+3.w,X
     inx
     inx
@@ -1040,7 +1040,7 @@ _kbd_update_highlight:
     .ACCU 8
     lda #KBD16_TR
     sta vram_wq_data+2.w,X
-    lda #$24
+    lda #$04
     sta vram_wq_data+3.w,X
     inx
     inx
@@ -1058,7 +1058,7 @@ _kbd_update_highlight:
     .ACCU 8
     lda $05                      ; new BL tile
     sta vram_wq_data+2.w,X
-    lda #$24
+    lda #$04
     sta vram_wq_data+3.w,X
     inx
     inx
@@ -1078,7 +1078,7 @@ _kbd_update_highlight:
     clc
     adc #1
     sta vram_wq_data+2.w,X
-    lda #$24
+    lda #$04
     sta vram_wq_data+3.w,X
 
     lda vram_wq_count.w

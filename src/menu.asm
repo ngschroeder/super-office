@@ -706,7 +706,7 @@ _fb_render:
     txa
     inc A
     clc
-    adc #27                      ; Digit tile (1→28, 2→29, ...)
+    adc #53                      ; Digit tile (1→54, 2→55, ...)
     sta VMDATAL.w
     lda $0E
     sta VMDATAH.w
@@ -813,7 +813,7 @@ _fb_render:
     txa
     inc A
     clc
-    adc #27
+    adc #53
     sta VMDATAL.w
     lda $0E
     sta VMDATAH.w

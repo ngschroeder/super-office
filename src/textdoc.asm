@@ -147,7 +147,7 @@ textdoc_init:
     lda doc_length.w
     sep #$20
     .ACCU 8
-    bne @skip_clear_doc          ; Data loaded from SRAM, don't wipe it
+    bne @loaded_from_sram        ; Data loaded from SRAM, don't wipe it
 
     rep #$30
     .ACCU 16
@@ -174,6 +174,16 @@ textdoc_init:
     stz doc_cursor_col.w
     stz doc_cursor_row.w
     stz doc_num_lines.w
+    bra @skip_clear_doc
+
+@loaded_from_sram:
+    ; Place cursor at end of document
+    rep #$10
+    .INDEX 16
+    jsr _textdoc_calc_cursor
+    jsr _textdoc_adjust_scroll
+    sep #$10
+    .INDEX 8
 
 @skip_clear_doc:
     stz doc_blink_timer.w

@@ -359,7 +359,7 @@ sram_load_file:
     .ACCU 16
     lda $02                      ; data size
     sta doc_length.w
-    stz doc_cursor_pos.w
+    sta doc_cursor_pos.w
     sep #$20
     .ACCU 8
 
