@@ -879,7 +879,7 @@ _fb_render:
     jmp @fb_slot
 
 @fb_footer:
-    ; --- Footer: "CLICK:OPEN  R:DEL" at row 16 ---
+    ; --- Footer: "RIGHT-CLICK TO DELETE" at row 16 ---
     rep #$20
     .ACCU 16
     lda #VRAM_BG3_MAP + (16 * 32) + 6
@@ -887,23 +887,27 @@ _fb_render:
     sep #$20
     .ACCU 8
 
+    _write_tile 18               ; R
+    _write_tile 9                ; I
+    _write_tile 7                ; G
+    _write_tile 8                ; H
+    _write_tile 20               ; T
+    _write_tile 83               ; -
     _write_tile 3                ; C
     _write_tile 12               ; L
     _write_tile 9                ; I
     _write_tile 3                ; C
     _write_tile 11               ; K
-    _write_tile 52               ; :
+    _write_tile 0                ; space
+    _write_tile 20               ; T
     _write_tile 15               ; O
-    _write_tile 16               ; P
-    _write_tile 5                ; E
-    _write_tile 14               ; N
     _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 18               ; R
-    _write_tile 52               ; :
     _write_tile 4                ; D
     _write_tile 5                ; E
     _write_tile 12               ; L
+    _write_tile 5                ; E
+    _write_tile 20               ; T
+    _write_tile 5                ; E
 
     rts
 
@@ -1135,7 +1139,7 @@ _fb_show_delete_confirm:
     _write_tile 5                ; E
     _write_tile 20               ; T
     _write_tile 5                ; E
-    _write_tile 47               ; ? (KBD_TILE_QUEST)
+    _write_tile 82               ; ? (KBD_TILE_QUEST)
     _write_tile 0                ; space
     _write_tile 25               ; Y
     _write_tile 5                ; E
