@@ -574,6 +574,18 @@ kbd_palette:
 .dw $7FFF    ; 13: white (spacebar face)
 .dw $294A    ; 14: gray (spacebar shadow)
 .dw $0000    ; 15: black (text)
+
+; Sub-palette 4: text label — white on transparent (CGRAM 16-19)
+.dw $0000    ; 16: transparent
+.dw $0000    ; 17: transparent (hides key background)
+.dw $0000    ; 18: transparent (hides shadow)
+.dw $7FFF    ; 19: white (text color)
+
+; Sub-palette 5: text label highlighted — yellow on transparent (CGRAM 20-23)
+.dw $0000    ; 20: transparent
+.dw $0000    ; 21: transparent (hides key background)
+.dw $0000    ; 22: transparent (hides shadow)
+.dw $03FF    ; 23: yellow (highlighted text)
 kbd_palette_end:
 
 

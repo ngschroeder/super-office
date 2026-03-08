@@ -827,14 +827,14 @@ _textdoc_render_status:
     sep #$20
     .ACCU 8
 
-    _write_tile 21               ; U
-    _write_tile 14               ; N
-    _write_tile 20               ; T
-    _write_tile  9               ; I
-    _write_tile 20               ; T
-    _write_tile 12               ; L
-    _write_tile  5               ; E
-    _write_tile  4               ; D
+    _write_tile_bg1 21            ; U
+    _write_tile_bg1 14            ; N
+    _write_tile_bg1 20            ; T
+    _write_tile_bg1  9            ; I
+    _write_tile_bg1 20            ; T
+    _write_tile_bg1 12            ; L
+    _write_tile_bg1  5            ; E
+    _write_tile_bg1  4            ; D
 
     rts
 

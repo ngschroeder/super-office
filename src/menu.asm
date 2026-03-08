@@ -281,46 +281,46 @@ _type_sel_build_map:
     ; Write each tile manually (no DMA — just 11 tiles)
     lda #19                      ; S
     sta VMDATAL.w
-    lda #$20                     ; Priority=1, pal=0
+    lda #$30                     ; Priority=1, PPP=4 (text label)
     sta VMDATAH.w
     lda #5                       ; E
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #12                      ; L
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #5                       ; E
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #3                       ; C
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #20                      ; T
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #20                      ; T
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #25                      ; Y
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #16                      ; P
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #5                       ; E
     sta VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
 
     ; --- Write "TEXT DOCUMENT" at row 13, col 10 ---
@@ -335,7 +335,14 @@ _type_sel_build_map:
     .MACRO _write_tile ARGS _tile
         lda #_tile
         sta VMDATAL.w
-        lda #$20
+        lda #$30                     ; PPP=4 (white text on transparent) + priority
+        sta VMDATAH.w
+    .ENDM
+
+    .MACRO _write_tile_bg1 ARGS _tile
+        lda #_tile
+        sta VMDATAL.w
+        lda #$20                     ; PPP=0 (BG1 4bpp font palette) + priority
         sta VMDATAH.w
     .ENDM
 
@@ -669,10 +676,10 @@ _fb_render:
     txa
     cmp fb_sel.w
     bne @fb_pal_normal
-    lda #$24                     ; Highlight (PPP=1, yellow)
+    lda #$34                     ; Highlight (PPP=5, yellow text)
     bra @fb_pal_set
 @fb_pal_normal:
-    lda #$20                     ; Normal (PPP=0, white) + priority
+    lda #$30                     ; Normal (PPP=4, white text)
 @fb_pal_set:
     sta $0E                      ; $0E = palette high byte for this row
 
@@ -1304,10 +1311,10 @@ _fb_update_del_hl:
     lda dialog_sel.w
     cmp #1
     bne @del_yes_normal
-    lda #$24                     ; Highlight
+    lda #$34                     ; Highlight (PPP=5)
     bra @del_yes_set
 @del_yes_normal:
-    lda #$20                     ; Normal
+    lda #$30                     ; Normal (PPP=4)
 @del_yes_set:
     sta $06
 
@@ -1326,19 +1333,19 @@ _fb_update_del_hl:
 
     ; Spaces
     stz VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     stz VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
 
     ; NO palette
     lda dialog_sel.w
     beq @del_no_hl
-    lda #$20                     ; Normal (YES is selected)
+    lda #$30                     ; Normal (YES is selected)
     bra @del_no_set
 @del_no_hl:
-    lda #$24                     ; Highlight (NO is selected = default)
+    lda #$34                     ; Highlight (NO is selected = default)
 @del_no_set:
     sta $06
 

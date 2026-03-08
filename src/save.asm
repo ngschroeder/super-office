@@ -713,7 +713,7 @@ fmenu_open:
 @fm_top:
     sta VMDATAL.w
     pha
-    lda #$20                     ; Priority=1
+    lda #$30                     ; PPP=4 (text label) + priority
     sta VMDATAH.w
     pla
     dey
@@ -729,7 +729,7 @@ fmenu_open:
     ldy #12
 @fm_r9:
     stz VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     dey
     bne @fm_r9
@@ -804,7 +804,7 @@ fmenu_open:
     ldy #12
 @fm_r13:
     stz VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     dey
     bne @fm_r13
@@ -821,7 +821,7 @@ fmenu_open:
 @fm_bot:
     sta VMDATAL.w
     pha
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     pla
     dey
@@ -1079,10 +1079,10 @@ _fmenu_update_highlight:
     tya
     cmp fmenu_sel.w
     bne @hl_normal
-    lda #$24                     ; PPP=1 (yellow/highlight) + priority
+    lda #$34                     ; PPP=5 (yellow text highlight) + priority
     bra @hl_write
 @hl_normal:
-    lda #$20                     ; PPP=0 (white/normal) + priority
+    lda #$30                     ; PPP=4 (white text label) + priority
 
 @hl_write:
     sta $06                      ; $06 = palette byte
@@ -1200,14 +1200,14 @@ _fmenu_show_saved:
     ; Yes — the textfont reuses keyboard tile ordering.
 
     ; So: S=19, A=1, V=22, E=5, D=4
-    _write_tile 19               ; S
-    _write_tile 1                ; A
-    _write_tile 22               ; V
-    _write_tile 5                ; E
-    _write_tile 4                ; D
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
+    _write_tile_bg1 19            ; S
+    _write_tile_bg1 1             ; A
+    _write_tile_bg1 22            ; V
+    _write_tile_bg1 5             ; E
+    _write_tile_bg1 4             ; D
+    _write_tile_bg1 0             ; space
+    _write_tile_bg1 0             ; space
+    _write_tile_bg1 0             ; space
 
     lda SHADOW_INIDISP.w
     sta INIDISP.w
@@ -1268,7 +1268,7 @@ _fmenu_start_save_as:
 @sas_top:
     sta VMDATAL.w
     pha
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     pla
     dey
@@ -1311,7 +1311,7 @@ _fmenu_start_save_as:
     ldy #12
 @sas_blank:
     stz VMDATAL.w
-    lda #$24                     ; Highlight palette
+    lda #$34                     ; Highlight text palette (PPP=5)
     sta VMDATAH.w
     dey
     bne @sas_blank
@@ -1330,7 +1330,7 @@ _fmenu_start_save_as:
 @sas_bot:
     sta VMDATAL.w
     pha
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     pla
     dey
@@ -1460,7 +1460,7 @@ _dialog_redraw_name:
     ; Convert to keyboard tile index
     jsr _ascii_to_kbd_tile
     sta VMDATAL.w
-    lda #$24                     ; Highlight palette
+    lda #$34                     ; Highlight text palette (PPP=5)
     sta VMDATAH.w
     inx
     bra @rn_loop
@@ -1471,13 +1471,13 @@ _dialog_redraw_name:
     ; Cursor position — show underscore
     lda #KBD_TILE_USCORE
     sta VMDATAL.w
-    lda #$24
+    lda #$34
     sta VMDATAH.w
     inx
     bra @rn_loop
 @rn_blank:
     stz VMDATAL.w
-    lda #$24
+    lda #$34
     sta VMDATAH.w
     inx
     bra @rn_loop
@@ -1641,7 +1641,7 @@ _dialog_show_dirty:
 @dd_top:
     sta VMDATAL.w
     pha
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     pla
     dey
@@ -1685,7 +1685,7 @@ _dialog_show_dirty:
     ldy #20
 @dd_r7:
     stz VMDATAL.w
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     dey
     bne @dd_r7
@@ -1730,7 +1730,7 @@ _dialog_show_dirty:
 @dd_bot:
     sta VMDATAL.w
     pha
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     pla
     dey
@@ -1881,16 +1881,16 @@ _dialog_update_dirty_hl:
     ; YES (3 chars at offset 1-3)
     lda dialog_sel.w
     beq @dhl_yes_hl
-    lda #$20                     ; Normal
+    lda #$30                     ; Normal (PPP=4)
     bra @dhl_yes_pal
 @dhl_yes_hl:
-    lda #$24                     ; Highlight
+    lda #$34                     ; Highlight (PPP=5)
 @dhl_yes_pal:
     sta $06
 
     ; Write " YES   "
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #25                      ; Y
     sta VMDATAL.w
@@ -1905,25 +1905,25 @@ _dialog_update_dirty_hl:
     lda $06
     sta VMDATAH.w
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
 
     ; NO (2 chars at offset 7-8)
     lda dialog_sel.w
     cmp #1
     beq @dhl_no_hl
-    lda #$20
+    lda #$30
     bra @dhl_no_pal
 @dhl_no_hl:
-    lda #$24
+    lda #$34
 @dhl_no_pal:
     sta $06
 
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #14                      ; N
     sta VMDATAL.w
@@ -1934,25 +1934,25 @@ _dialog_update_dirty_hl:
     lda $06
     sta VMDATAH.w
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
 
     ; CANCEL (6 chars at offset 12-17)
     lda dialog_sel.w
     cmp #2
     beq @dhl_can_hl
-    lda #$20
+    lda #$30
     bra @dhl_can_pal
 @dhl_can_hl:
-    lda #$24
+    lda #$34
 @dhl_can_pal:
     sta $06
 
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
     lda #3                       ; C
     sta VMDATAL.w
@@ -1979,7 +1979,7 @@ _dialog_update_dirty_hl:
     lda $06
     sta VMDATAH.w
     stz VMDATAL.w                ; space
-    lda #$20
+    lda #$30
     sta VMDATAH.w
 
     lda SHADOW_INIDISP.w
