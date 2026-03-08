@@ -158,16 +158,19 @@ nmi_handler:
     ; ===================================================================
     stz BG1HOFS.w
     stz BG1HOFS.w
-    stz BG1VOFS.w
-    stz BG1VOFS.w
+    lda #$FE                     ; VOFS -1 compensates for PPU scroll quirk
+    sta BG1VOFS.w
+    sta BG1VOFS.w
     stz BG2HOFS.w
     stz BG2HOFS.w
-    stz BG2VOFS.w
-    stz BG2VOFS.w
+    lda #$FE
+    sta BG2VOFS.w
+    sta BG2VOFS.w
     stz BG3HOFS.w
     stz BG3HOFS.w
-    stz BG3VOFS.w
-    stz BG3VOFS.w
+    lda #$FE
+    sta BG3VOFS.w
+    sta BG3VOFS.w
 
     ; ===================================================================
     ; 5. Set vblank_done flag for main loop synchronization
