@@ -245,6 +245,17 @@ init_reset:
     lda #$28                     ; High byte of $2800
     sta CGDATA.w
 
+    ; === Initialize SRAM (check/format on first boot) ===
+    jsr sram_init
+
+    ; === Initialize save system variables ===
+    lda #$FF
+    sta current_slot.w           ; No file loaded yet
+    stz file_type.w
+    stz fmenu_visible.w
+    stz dialog_visible.w
+    stz fb_initialized.w
+
     ; === Set initial cursor position (center of screen) ===
     rep #$20                     ; 16-bit A
     .ACCU 16
@@ -260,8 +271,12 @@ init_reset:
     sta current_state.w
 
     ; === Initialize input ---
-    stz input_device.w
-    stz mouse_sensitivity.w
+    stz click_new.w
+    stz click_held.w
+    stz rclick_new.w
+    stz rclick_held.w
+    stz mouse_buttons.w
+    stz mouse_old_btns.w
 
     ; === Initialize shadow registers ===
     lda #$0F                     ; Full brightness, force blank OFF

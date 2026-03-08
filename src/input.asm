@@ -1,21 +1,20 @@
 ; ============================================================================
-; input.asm — Mouse Protocol + Joypad Fallback Input System
+; input.asm — SNES Mouse Input System (mouse-only, no joypad fallback)
 ;
 ; Provides a unified interface:
 ;   cursor_x (16-bit), cursor_y (16-bit)
-;   click_new (flag), click_held (flag)
-;   input_device (0=joypad, 1=mouse)
+;   click_new (flag), click_held (flag)     — left mouse button
+;   rclick_new (flag), rclick_held (flag)   — right mouse button
 ;
 ; Auto-joypad is DISABLED. All reads are manual via serial latch+clock.
-; This avoids Mesen emulation issues with serial state after auto-joypad.
 ;
 ; Reference: Mario Paint bank1.asm L00D9E1, input-peripherals.md §2-§3
 ; ============================================================================
 
 ; ============================================================================
 ; read_input — Main input entry point. Called from main loop.
-; Manually latches and reads the serial port. Detects mouse vs joypad
-; and dispatches accordingly.
+; Manually latches and reads the serial port. Reads mouse displacement
+; and buttons. Mouse is the only supported input device.
 ; Assumes: 8-bit A/X/Y (sep #$30)
 ; ============================================================================
 read_input:
@@ -27,8 +26,6 @@ read_input:
     stz JOYSER0.w                ; Latch low — begin serial clocking
 
     ; --- Read 16 serial bits into joy_current_h (byte 1) / joy_current_l (byte 2) ---
-    ; First 8 serial reads → joy_current_h (equivalent to JOY1H)
-    ; Next 8 serial reads → joy_current_l (equivalent to JOY1L)
     stz joy_current_h.w
     stz joy_current_l.w
 
@@ -48,52 +45,11 @@ read_input:
     dey
     bne @read_byte2
 
-    ; --- Check device signature in byte 2 (joy_current_l) ---
-    ; Joypad: JOY1L = AXlr 0000  → low nibble = $0
-    ; Mouse:  JOY1L = RL SS 0001 → low nibble = $1
-    lda joy_current_l.w
-    and #$0F
-    cmp #MOUSE_SIGNATURE         ; $01 = mouse
-    beq @mouse_detected
-
-    ; --- No mouse: use joypad ---
-    lda #INPUT_JOYPAD
-    sta input_device.w
-    jsr read_joypad
-    jmp @update_click
-
-@mouse_detected:
-    lda #INPUT_MOUSE
-    sta input_device.w
+    ; --- Read mouse bytes 3-4 (displacement) ---
     jsr read_mouse
 
-@update_click:
     ; --- Update unified click flags ---
-    lda input_device.w
-    bne @mouse_click
-
-    ; Joypad: A button = click
-    lda joy_new_l.w
-    and #JOY_A
-    beq @no_new_click_jp
-    lda #$01
-    sta click_new.w
-    bra @check_held_jp
-@no_new_click_jp:
-    stz click_new.w
-@check_held_jp:
-    lda joy_current_l.w
-    and #JOY_A
-    beq @no_held_jp
-    lda #$01
-    sta click_held.w
-    rts
-@no_held_jp:
-    stz click_held.w
-    rts
-
-@mouse_click:
-    ; Mouse: left button from mouse_buttons bit 0
+    ; Left button: mouse_buttons bit 0
     lda mouse_buttons.w
     and #$01                     ; Left button
     beq @no_held_mouse
@@ -103,7 +59,7 @@ read_input:
 @no_held_mouse:
     stz click_held.w
 @check_new_mouse:
-    ; New click = current AND NOT previous
+    ; New left click = current AND NOT previous
     lda mouse_buttons.w
     and #$01
     tax                          ; X = current left button state
@@ -113,127 +69,31 @@ read_input:
     stx $00                      ; temp
     and $00                      ; AND with current = newly pressed
     sta click_new.w
-    rts
 
-; ============================================================================
-; read_joypad — Process standard joypad input with edge detection
-; Updates cursor position based on d-pad with acceleration.
-; Reference: B.O.B. joystick.a, WW2 bank0.asm L0005A4
-; Assumes: 8-bit A/X/Y
-; ============================================================================
-read_joypad:
-    .ACCU 8
-    .INDEX 8
-    ; --- Edge detection: new = (current XOR previous) AND current ---
-    lda joy_current_l.w
-    eor joy_previous_l.w
-    and joy_current_l.w
-    sta joy_new_l.w
+    ; --- Right button ---
+    lda mouse_buttons.w
+    and #$02                     ; Right button
+    beq @no_right_held
+    lda #$01
+    sta rclick_held.w
+    bra @check_new_right
+@no_right_held:
+    stz rclick_held.w
+@check_new_right:
+    ; New right click = current AND NOT previous
+    lda mouse_buttons.w
+    and #$02
+    tax
+    lda mouse_old_btns.w
+    and #$02
+    eor #$02                     ; Invert: 1 if was NOT pressed
+    stx $00
+    and $00
+    beq @no_new_rclick
+    lda #$01
+@no_new_rclick:
+    sta rclick_new.w
 
-    lda joy_current_h.w
-    eor joy_previous_h.w
-    and joy_current_h.w
-    sta joy_new_h.w
-
-    ; --- Save current as previous for next frame ---
-    lda joy_current_l.w
-    sta joy_previous_l.w
-    lda joy_current_h.w
-    sta joy_previous_h.w
-
-    ; --- Determine cursor speed (acceleration after holding d-pad) ---
-    ; Check if any d-pad direction is held
-    lda joy_current_h.w
-    and #(JOY_UP | JOY_DOWN | JOY_LEFT | JOY_RIGHT)
-    beq @reset_hold
-    ; D-pad is held — increment hold counter
-    lda dpad_hold_count.w
-    cmp #CURSOR_ACCEL_DELAY
-    bcs @use_fast                ; Already past threshold
-    inc dpad_hold_count.w
-    bra @use_slow
-@reset_hold:
-    stz dpad_hold_count.w
-@use_slow:
-    lda #CURSOR_SPEED_SLOW       ; 2 px/frame
-    bra @move_cursor
-@use_fast:
-    lda #CURSOR_SPEED_FAST       ; 4 px/frame
-
-@move_cursor:
-    ; A = speed (2 or 4)
-    sta $00                      ; temp: speed
-
-    ; --- Move cursor based on d-pad ---
-    ; Right
-    lda joy_current_h.w
-    and #JOY_RIGHT
-    beq @check_left
-    rep #$20                     ; 16-bit A
-    .ACCU 16
-    lda cursor_x.w
-    clc
-    adc $00                      ; Add speed (8-bit value, zero-extended)
-    cmp #CURSOR_MAX_X+1
-    bcc @store_x
-    lda #CURSOR_MAX_X            ; Clamp to max
-@store_x:
-    sta cursor_x.w
-    sep #$20                     ; 8-bit A
-    .ACCU 8
-    bra @check_up
-
-@check_left:
-    lda joy_current_h.w
-    and #JOY_LEFT
-    beq @check_up
-    rep #$20                     ; 16-bit A
-    .ACCU 16
-    lda cursor_x.w
-    sec
-    sbc $00
-    bpl @store_x2                ; If >= 0, store
-    lda #CURSOR_MIN_X            ; Clamp to min
-@store_x2:
-    sta cursor_x.w
-    sep #$20                     ; 8-bit A
-    .ACCU 8
-
-@check_up:
-    lda joy_current_h.w
-    and #JOY_UP
-    beq @check_down
-    rep #$20                     ; 16-bit A
-    .ACCU 16
-    lda cursor_y.w
-    sec
-    sbc $00
-    bpl @store_y
-    lda #CURSOR_MIN_Y
-@store_y:
-    sta cursor_y.w
-    sep #$20                     ; 8-bit A
-    .ACCU 8
-    rts
-
-@check_down:
-    lda joy_current_h.w
-    and #JOY_DOWN
-    beq @done_joypad
-    rep #$20                     ; 16-bit A
-    .ACCU 16
-    lda cursor_y.w
-    clc
-    adc $00
-    cmp #CURSOR_MAX_Y+1
-    bcc @store_y2
-    lda #CURSOR_MAX_Y
-@store_y2:
-    sta cursor_y.w
-    sep #$20                     ; 8-bit A
-    .ACCU 8
-
-@done_joypad:
     rts
 
 ; ============================================================================

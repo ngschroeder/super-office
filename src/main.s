@@ -26,7 +26,16 @@
 .INCLUDE "nmi.asm"           ; NMI (VBlank) handler
 .INCLUDE "input.asm"         ; Mouse protocol + joypad fallback
 .INCLUDE "cursor.asm"        ; Cursor sprite OAM management
+.INCLUDE "title.asm"         ; Title screen logic
+.INCLUDE "keyboard.asm"      ; On-screen keyboard overlay (BG3)
+.INCLUDE "menu.asm"          ; Type selection + file browser
+.INCLUDE "textdoc.asm"       ; Text document editor (Phase 4)
+.INCLUDE "spreadsheet.asm"   ; Spreadsheet editor (Phase 5)
+.INCLUDE "save.asm"          ; SRAM save/load system (Phase 6)
 .INCLUDE "states.asm"        ; Top-level state machine dispatch
 
 ; --- Graphics data ---
 .INCLUDE "gfx/cursor.asm"   ; Cursor sprite tiles and palette
+.INCLUDE "gfx/title.asm"    ; Title screen tiles, tilemaps, palettes
+.INCLUDE "gfx/keyboard.asm" ; Keyboard font tiles and palette
+.INCLUDE "gfx/textfont.asm" ; Text editor 4bpp font + ASCII table

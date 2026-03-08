@@ -50,6 +50,11 @@ cursor_update:
     lda cursor_x+1.w            ; High byte of 16-bit cursor_x
     and #$01                     ; Bit 0 = X position bit 8
     ora #%00000010               ; Bit 1 = 1 (large size = 16x16)
-    sta OAM_BUF_HI.w            ; High table byte 0, sprite 0 bits
+    ; Preserve bits 2-7 (sprites 1-3 large flags set by title icons)
+    sta $00                      ; temp: cursor bits
+    lda OAM_BUF_HI.w
+    and #%11111100               ; Clear sprite 0 bits
+    ora $00                      ; Merge cursor bits
+    sta OAM_BUF_HI.w            ; High table byte 0
 
     rts

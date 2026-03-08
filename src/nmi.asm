@@ -62,7 +62,57 @@ nmi_handler:
     sta MDMAEN.w
 
     ; ===================================================================
-    ; 2. Flush deferred DMA queue (no-op in Phase 1)
+    ; 2. Process VRAM/CGRAM write queue (cursor blink, kbd highlight)
+    ;    Up to 10 entries, each = addr (2) + data (2)
+    ;    If addr_hi=$FF: CGRAM write (addr_lo=CGRAM addr, data=color)
+    ;    Else: VRAM write (addr=VRAM addr, data=tile+attr)
+    ; ===================================================================
+    .INDEX 16                       ; X/Y are 16-bit from entry rep #$30
+    lda vram_wq_count.w
+    beq @no_vram_wq
+
+    lda #$80
+    sta VMAIN.w                  ; VRAM increment after high byte write
+    ldx #$0000
+@vram_wq_loop:
+    lda vram_wq_data+1.w,X      ; addr_hi
+    cmp #$FF
+    beq @cgram_write
+
+    ; --- VRAM write ---
+    rep #$20
+    .ACCU 16
+    lda vram_wq_data.w,X        ; VRAM address (16-bit)
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+    lda vram_wq_data+2.w,X      ; Tile index
+    sta VMDATAL.w
+    lda vram_wq_data+3.w,X      ; Attribute byte
+    sta VMDATAH.w
+    bra @wq_next
+
+@cgram_write:
+    ; --- CGRAM write (addr_hi=$FF marker) ---
+    lda vram_wq_data.w,X        ; CGRAM byte address
+    sta CGADD.w
+    lda vram_wq_data+2.w,X      ; Color low byte
+    sta CGDATA.w
+    lda vram_wq_data+3.w,X      ; Color high byte
+    sta CGDATA.w
+
+@wq_next:
+    inx
+    inx
+    inx
+    inx
+    dec vram_wq_count.w
+    bne @vram_wq_loop
+    stz vram_wq_count.w          ; Ensure count is exactly 0
+@no_vram_wq:
+
+    ; ===================================================================
+    ; 2b. Flush deferred DMA queue (no-op in Phase 1)
     ; ===================================================================
     jsr dma_queue_flush
 
@@ -97,6 +147,10 @@ nmi_handler:
     sta CGWSEL.w
     lda SHADOW_CGADSUB.w
     sta CGADSUB.w
+
+    ; --- Flush HDMA enable ---
+    lda SHADOW_HDMAEN.w
+    sta HDMAEN.w
 
     ; ===================================================================
     ; 4. Update scroll registers (all zero for Phase 1)
