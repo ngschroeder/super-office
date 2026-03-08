@@ -818,6 +818,16 @@ _kbd_update_highlight:
     .ACCU 8
     .INDEX 8
 
+    ; === If both old and new are spacebar (row 3), skip — already highlighted ===
+    lda kbd_old_row.w
+    cmp #$03
+    bcc +
+    lda kbd_cursor_row.w
+    cmp #$03
+    bcc +
+    jmp @save_old                ; Both on spacebar, nothing to change
++
+
     ; === Unhighlight old position ===
     lda kbd_old_row.w
     cmp #$03
