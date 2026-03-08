@@ -398,6 +398,14 @@ _textdoc_insert:
 
     ; Recalculate cursor row/col and adjust scroll
     jsr _textdoc_calc_cursor
+
+    ; Word wrap if cursor past right edge
+    lda doc_cursor_col.w
+    cmp #DOC_VISIBLE_COLS
+    bcc @no_wrap
+    jsr _textdoc_word_wrap
+@no_wrap:
+
     jsr _textdoc_adjust_scroll
 
     ; Mark dirty
@@ -598,6 +606,171 @@ _textdoc_adjust_scroll:
     sta doc_dirty.w
 
 @adj_ok:
+    rts
+
+
+; ============================================================================
+; _textdoc_word_wrap — Insert a newline to wrap the current line at col 30
+;
+; When cursor col >= DOC_VISIBLE_COLS after an insert, this routine:
+;   1. Finds the start of the current line in the buffer
+;   2. Scans forward to find the last space or post-hyphen break point
+;      within the first 30 columns
+;   3. If a break point is found: replaces space with $0A (or inserts $0A
+;      after hyphen), adjusting buffer and cursor accordingly
+;   4. If no break point: inserts $0A at the column boundary (hard break)
+;
+; Assumes: 8-bit A, 16-bit X/Y (called from _textdoc_insert context)
+; ============================================================================
+_textdoc_word_wrap:
+    .ACCU 8
+    .INDEX 16
+
+    ; --- Find the start of the current line ---
+    ; Scan backwards from cursor_pos to find preceding newline (or buffer start)
+    ldx doc_cursor_pos.w
+    bne +                        ; Safety: can't wrap at pos 0
+    jmp @wrap_no_room
++   dex                          ; Back up past the char we just inserted
+@wrap_find_line_start:
+    cpx #$0000
+    beq @wrap_got_line_start
+    dex
+    lda DOC_BUF_ADDR.w,X
+    cmp #$0A
+    bne @wrap_find_line_start
+    inx                          ; Point past the newline
+@wrap_got_line_start:
+    stx $08                      ; $08-$09 = line start offset
+
+    ; --- Scan forward up to 30 cols to find last break point ---
+    ; A break point is: a space (replace with newline) or
+    ; the position after a hyphen (insert newline after it)
+    ldy #$0000                   ; Y = column counter
+    stz $0B                      ; $0B = best break type (0=none, 1=space, 2=after-hyphen)
+    ; $0C-$0D = best break buffer offset (16-bit)
+
+@wrap_scan:
+    cpy #DOC_VISIBLE_COLS
+    bcs @wrap_scan_done
+    cpx doc_length.w
+    bcs @wrap_scan_done
+    lda DOC_BUF_ADDR.w,X
+    cmp #$0A
+    beq @wrap_scan_done          ; Hit a newline — shouldn't happen but bail
+
+    cmp #$20                     ; Space?
+    beq @wrap_found_space
+    cmp #$2D                     ; Hyphen?
+    beq @wrap_found_hyphen
+    bra @wrap_scan_next
+
+@wrap_found_space:
+    lda #$01                     ; Type = space (replace with newline)
+    sta $0B
+    stx $0C                      ; Save offset of space
+    bra @wrap_scan_next
+
+@wrap_found_hyphen:
+    lda #$02                     ; Type = after-hyphen (insert newline after)
+    sta $0B
+    inx                          ; Point to position after hyphen
+    stx $0C                      ; Save offset after hyphen
+    dex                          ; Restore X for scan loop
+    bra @wrap_scan_next
+
+@wrap_scan_next:
+    inx
+    iny
+    bra @wrap_scan
+
+@wrap_scan_done:
+    ; --- Decide wrap action ---
+    lda $0B
+    beq @wrap_hard_break         ; No break point found — hard break at col 30
+
+    cmp #$01
+    beq @wrap_replace_space
+
+    ; --- Type 2: Insert newline after hyphen ---
+    ; Insert $0A at $0C (after the hyphen)
+    ldx $0C                      ; Buffer offset for new newline
+    jmp @wrap_insert_nl
+
+@wrap_replace_space:
+    ; --- Type 1: Replace space with newline ---
+    ldx $0C
+    lda #$0A
+    sta DOC_BUF_ADDR.w,X        ; Replace space with newline
+
+    ; Cursor position doesn't change (it's after the wrapped word)
+    ; Recalculate cursor row/col
+    jsr _textdoc_calc_cursor
+    rts
+
+@wrap_hard_break:
+    ; Insert $0A at line_start + 30
+    rep #$20
+    .ACCU 16
+    lda $08                      ; line start
+    clc
+    adc #DOC_VISIBLE_COLS
+    tax
+    sep #$20
+    .ACCU 8
+    ; Fall through to insert newline
+
+@wrap_insert_nl:
+    ; --- Insert $0A at buffer position X ---
+    ; Check buffer capacity
+    rep #$20
+    .ACCU 16
+    lda doc_length.w
+    cmp #DOC_MAX_SIZE - 1
+    sep #$20
+    .ACCU 8
+    bcs @wrap_no_room
+
+    ; Save insert position
+    stx $0E                      ; $0E-$0F = newline insert offset
+
+    ; Shift bytes right from insert point
+    ldx doc_length.w
+@wrap_shift:
+    cpx $0E
+    beq @wrap_place_nl
+    dex
+    lda DOC_BUF_ADDR.w,X
+    sta DOC_BUF_ADDR+1.w,X
+    bra @wrap_shift
+
+@wrap_place_nl:
+    ldx $0E
+    lda #$0A
+    sta DOC_BUF_ADDR.w,X
+
+    ; Increment length and cursor position (newline inserted before cursor)
+    rep #$20
+    .ACCU 16
+    inc doc_length.w
+
+    ; If newline was inserted at or before cursor, bump cursor forward
+    lda $0E
+    cmp doc_cursor_pos.w
+    bcs @wrap_nl_after_cursor
+    inc doc_cursor_pos.w
+@wrap_nl_after_cursor:
+    sep #$20
+    .ACCU 8
+
+    ; Null-terminate
+    ldx doc_length.w
+    stz DOC_BUF_ADDR.w,X
+
+    ; Recalculate cursor
+    jsr _textdoc_calc_cursor
+
+@wrap_no_room:
     rts
 
 
