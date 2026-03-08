@@ -1,15 +1,19 @@
 ; ============================================================================
 ; title.asm — Title Screen State Logic
 ;
-; title_init:  Loads all title graphics, sets up HDMA, starts fade in.
+; title_init:  Loads all title graphics, starts fade in.
 ;              Called once from state_boot.
 ; state_title: Per-frame update — input, menu highlight, click detection.
+;
+; BG2 displays the full pre-converted title scene (sky, buildings, desk,
+; title text, icons).  BG1 overlays menu text ("CREATE NEW" / "OPEN FILE").
+; No HDMA or color math — sky gradient is baked into the BG2 tiles.
 ; ============================================================================
 
 ; ============================================================================
 ; title_init — Set up the title screen
 ; Called during STATE_BOOT. Screen should be in force blank.
-; Uploads tiles, tilemaps, palettes; configures HDMA; starts fade in.
+; Uploads tiles, tilemaps, palettes; starts fade in.
 ; ============================================================================
 title_init:
     .ACCU 8
@@ -20,16 +24,27 @@ title_init:
     sta INIDISP.w
     sta SHADOW_INIDISP.w
 
-    ; === Upload BG1 font tiles to VRAM ===
+    ; === Disable HDMA (not used for converted title) ===
+    stz SHADOW_HDMAEN.w
+    stz HDMAEN.w
+
+    ; === Disable color math ===
+    stz CGWSEL.w
+    stz SHADOW_CGWSEL.w
+    stz CGADSUB.w
+    stz SHADOW_CGADSUB.w
+
+    ; === Set up DMA channel 0 for all uploads ===
     lda #$80
     sta VMAIN.w
     lda #$01                     ; DMA mode 1: two registers (VMDATAL/H)
     sta DMAP0.w
     lda #$18
     sta BBAD0.w
+
+    ; === Upload BG1 font tiles to VRAM $0000 ===
     lda #:title_font_tiles
     sta A1B0.w
-
     rep #$20
     .ACCU 16
     lda #VRAM_BG1_CHR
@@ -43,131 +58,78 @@ title_init:
     lda #$01
     sta MDMAEN.w
 
-    ; === Upload BG2 scene tiles to VRAM ===
-    lda #:title_scene_tiles
+    ; === Upload BG2 converted image tiles to VRAM $2000 ===
+    lda #:title_img_tiles
     sta A1B0.w
     rep #$20
     .ACCU 16
     lda #VRAM_BG2_CHR
     sta VMADDL.w
-    lda #title_scene_tiles
+    lda #title_img_tiles
     sta A1T0L.w
-    lda #title_scene_tiles_end - title_scene_tiles
+    lda #title_img_tiles_end - title_img_tiles
     sta DAS0L.w
     sep #$20
     .ACCU 8
     lda #$01
     sta MDMAEN.w
 
-    ; === Upload sprite icon tiles ===
-    ; Top row: tiles 2-9 → VRAM $6020 (after cursor's tiles 0-1)
-    lda #:title_icon_tiles_top
+    ; === Upload BG2 converted tilemap to VRAM $7400 ===
+    lda #:title_img_map
     sta A1B0.w
     rep #$20
     .ACCU 16
-    lda #VRAM_OBJ_CHR + (2 * 16) ; Tile 2 = offset 32 words from base
+    lda #VRAM_BG2_MAP
     sta VMADDL.w
-    lda #title_icon_tiles_top
+    lda #title_img_map
     sta A1T0L.w
-    lda #title_icon_tiles_top_end - title_icon_tiles_top
+    lda #title_img_map_end - title_img_map
     sta DAS0L.w
     sep #$20
     .ACCU 8
     lda #$01
     sta MDMAEN.w
 
-    ; Bottom row: tiles 18-25 → VRAM $6120
-    lda #:title_icon_tiles_bot
-    sta A1B0.w
-    rep #$20
-    .ACCU 16
-    lda #VRAM_OBJ_CHR + (18 * 16) ; Tile 18
-    sta VMADDL.w
-    lda #title_icon_tiles_bot
-    sta A1T0L.w
-    lda #title_icon_tiles_bot_end - title_icon_tiles_bot
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; === Upload BG palettes (all 256 bytes) ===
+    ; === Upload palettes 0-6 (converted image) to CGRAM ===
     stz CGADD.w                  ; Start at color 0
     lda #$00
     sta DMAP0.w                  ; Mode 0: single register
     lda #$22
     sta BBAD0.w                  ; CGDATA
-    lda #:title_bg_palettes
+    lda #:title_img_palette
     sta A1B0.w
     rep #$20
     .ACCU 16
-    lda #title_bg_palettes
+    lda #title_img_palette
     sta A1T0L.w
-    lda #title_bg_palettes_end - title_bg_palettes
+    lda #title_img_palette_end - title_img_palette
     sta DAS0L.w
     sep #$20
     .ACCU 8
     lda #$01
     sta MDMAEN.w
 
-    ; === Upload sprite icon palettes (palettes 1-4, starting at CGRAM 144) ===
-    lda #144                     ; Sprite palette 1 start (128 + 16)
+    ; === Upload palette 7 (menu text: white) to CGRAM ===
+    lda #(7 * 16)               ; Palette 7 starts at CGRAM index 112
     sta CGADD.w
-    lda #:title_sprite_palettes
+    lda #:title_menu_palette
     sta A1B0.w
     rep #$20
     .ACCU 16
-    lda #title_sprite_palettes
+    lda #title_menu_palette
     sta A1T0L.w
-    lda #title_sprite_palettes_end - title_sprite_palettes
+    lda #title_menu_palette_end - title_menu_palette
     sta DAS0L.w
     sep #$20
     .ACCU 8
     lda #$01
     sta MDMAEN.w
 
-    ; === Build BG1 tilemap (title text + menu) ===
+    ; === Build BG1 tilemap (menu text only) ===
     jsr _title_build_bg1_map
 
-    ; === Build BG2 tilemap (scene) ===
-    jsr _title_build_bg2_map
-
-    ; === Set up sprite icons in OAM shadow ===
-    jsr _title_setup_icons
-
-    ; === Configure color math for HDMA sky gradient ===
-    ; Sub screen source = fixed color, color math always enabled
-    lda #$02                     ; CGWSEL: sub = fixed color
-    sta CGWSEL.w
-    sta SHADOW_CGWSEL.w
-    lda #$20                     ; CGADSUB: add to backdrop
-    sta CGADSUB.w
-    sta SHADOW_CGADSUB.w
-
-    ; Initialize fixed color to black (HDMA will override per-scanline)
-    lda #$E0                     ; All channels, intensity 0
-    sta COLDATA.w
-
-    ; === Set up HDMA channel 7 for sky gradient ===
-    lda #$02                     ; Transfer mode 2: write same register twice
-    sta DMAP7.w
-    lda #$32                     ; B-bus: COLDATA ($2132)
-    sta BBAD7.w
-    rep #$20
-    .ACCU 16
-    lda #title_hdma_gradient
-    sta A1T7L.w
-    sep #$20
-    .ACCU 8
-    lda #:title_hdma_gradient
-    sta A1B7.w                   ; Source bank (A1B7 = $4374)
-
-    ; Enable HDMA channel 7
-    lda #$80                     ; Bit 7 = channel 7
-    sta SHADOW_HDMAEN.w
-
     ; === Enable BG1, BG2, and sprites on main screen ===
+    ; BG2 = converted scene image, BG1 = menu text overlay, OBJ = cursor + arrow
     lda #%00010011               ; OBJ + BG2 + BG1
     sta TM.w
     sta SHADOW_TM.w
@@ -381,7 +343,7 @@ _title_update_menu_arrow:
 
 ; ============================================================================
 ; _title_build_bg1_map — Write BG1 tilemap to VRAM
-; Zeroes the entire map first, then writes text rows.
+; Zeroes the entire map first, then writes menu text rows only.
 ; Must be called during force blank.
 ; ============================================================================
 _title_build_bg1_map:
@@ -418,68 +380,12 @@ _title_build_bg1_map:
     lda #$01
     sta MDMAEN.w
 
-    ; --- Write text rows (6 rows for large 16x16 title + menu) ---
+    ; --- Write menu text rows ---
     ; Set up DMA mode 1 and bank once
     lda #$01                     ; Mode 1 (increment, two regs)
     sta DMAP0.w
-    lda #:title_text_row3
+    lda #:title_text_row21
     sta A1B0.w
-
-    ; Row 3: "SUPER" top halves
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG1_MAP + (3 * 32) + TITLE_ROW3_COL
-    sta VMADDL.w
-    lda #title_text_row3
-    sta A1T0L.w
-    lda #title_text_row3_end - title_text_row3
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 4: "SUPER" bottom halves
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG1_MAP + (4 * 32) + TITLE_ROW4_COL
-    sta VMADDL.w
-    lda #title_text_row4
-    sta A1T0L.w
-    lda #title_text_row4_end - title_text_row4
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 6: "OFFICE APP" top halves
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG1_MAP + (6 * 32) + TITLE_ROW6_COL
-    sta VMADDL.w
-    lda #title_text_row6
-    sta A1T0L.w
-    lda #title_text_row6_end - title_text_row6
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 7: "OFFICE APP" bottom halves
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG1_MAP + (7 * 32) + TITLE_ROW7_COL
-    sta VMADDL.w
-    lda #title_text_row7
-    sta A1T0L.w
-    lda #title_text_row7_end - title_text_row7
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
 
     ; Row 21: "CREATE NEW"
     rep #$20
@@ -508,303 +414,5 @@ _title_build_bg1_map:
     .ACCU 8
     lda #$01
     sta MDMAEN.w
-
-    rts
-
-
-; ============================================================================
-; _title_build_bg2_map — Write BG2 tilemap to VRAM
-; Zeroes the map, then writes building and desk rows.
-; Must be called during force blank.
-; ============================================================================
-_title_build_bg2_map:
-    .ACCU 8
-    .INDEX 8
-
-    lda #$80
-    sta VMAIN.w
-
-    ; Zero BG2 tilemap
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP
-    sta VMADDL.w
-    sep #$20
-    .ACCU 8
-
-    stz $00
-    lda #$09                     ; Fixed source, mode 1
-    sta DMAP0.w
-    lda #$18
-    sta BBAD0.w
-    stz A1T0L.w
-    stz A1T0H.w
-    stz A1B0.w
-    rep #$20
-    .ACCU 16
-    lda #2048
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; --- Write cloud tiles into sky rows (direct VRAM writes) ---
-    ; Cloud cluster 1: row 2, cols 3-6
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (2 * 32) + 3
-    sta VMADDL.w
-    lda #(SCENE_CLOUD_L | (PAL2_HI << 8))
-    sta VMDATAL.w
-    lda #(SCENE_CLOUD_M | (PAL2_HI << 8))
-    sta VMDATAL.w
-    lda #(SCENE_CLOUD_M | (PAL2_HI << 8))
-    sta VMDATAL.w
-    lda #(SCENE_CLOUD_R | (PAL2_HI << 8))
-    sta VMDATAL.w
-
-    ; Cloud cluster 2: row 4, cols 22-25
-    lda #VRAM_BG2_MAP + (4 * 32) + 22
-    sta VMADDL.w
-    lda #(SCENE_CLOUD_L | (PAL2_HI << 8))
-    sta VMDATAL.w
-    lda #(SCENE_CLOUD_M | (PAL2_HI << 8))
-    sta VMDATAL.w
-    lda #(SCENE_CLOUD_M | (PAL2_HI << 8))
-    sta VMDATAL.w
-    lda #(SCENE_CLOUD_R | (PAL2_HI << 8))
-    sta VMDATAL.w
-    sep #$20
-    .ACCU 8
-
-    ; --- Write building rows 8-14 ---
-    lda #$01                     ; Mode 1
-    sta DMAP0.w
-    lda #:title_scene_row8
-    sta A1B0.w
-
-    ; Row 8
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (8 * 32)
-    sta VMADDL.w
-    lda #title_scene_row8
-    sta A1T0L.w
-    lda #64                      ; 32 entries x 2 bytes
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 9
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (9 * 32)
-    sta VMADDL.w
-    lda #title_scene_row9
-    sta A1T0L.w
-    lda #64
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 10
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (10 * 32)
-    sta VMADDL.w
-    lda #title_scene_row10
-    sta A1T0L.w
-    lda #64                      ; 32 entries x 2 bytes
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 11
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (11 * 32)
-    sta VMADDL.w
-    lda #title_scene_row11
-    sta A1T0L.w
-    lda #64
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 12
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (12 * 32)
-    sta VMADDL.w
-    lda #title_scene_row12
-    sta A1T0L.w
-    lda #64
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 13
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (13 * 32)
-    sta VMADDL.w
-    lda #title_scene_row13
-    sta A1T0L.w
-    lda #64
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 14
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (14 * 32)
-    sta VMADDL.w
-    lda #title_scene_row14
-    sta A1T0L.w
-    lda #64
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Row 15 (desk edge)
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG2_MAP + (15 * 32)
-    sta VMADDL.w
-    lda #title_scene_row15
-    sta A1T0L.w
-    lda #64
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Rows 16-27 (desk surface — reuse same row data 12 times)
-    rep #$30
-    .ACCU 16
-    .INDEX 16
-    ldx #16                      ; Start at row 16
-@desk_loop:
-    txa
-    asl A                        ; row * 2
-    asl A                        ; row * 4
-    asl A                        ; row * 8
-    asl A                        ; row * 16
-    asl A                        ; row * 32
-    clc
-    adc #VRAM_BG2_MAP
-    sta VMADDL.w
-    lda #title_desk_row
-    sta A1T0L.w
-    lda #64
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #:title_desk_row
-    sta A1B0.w
-    lda #$01
-    sta DMAP0.w
-    lda #$18
-    sta BBAD0.w
-    lda #$01
-    sta MDMAEN.w
-    rep #$20
-    .ACCU 16
-    inx
-    cpx #28                      ; Rows 16-27
-    bcc @desk_loop
-
-    sep #$30
-    .ACCU 8
-    .INDEX 8
-    rts
-
-
-; ============================================================================
-; _title_setup_icons — Write sprite icon entries into OAM shadow buffer
-; OAM entries 1-4 for the four desk icons.
-; Entry 0 is the cursor (managed by cursor_update).
-; ============================================================================
-_title_setup_icons:
-    .ACCU 8
-    .INDEX 8
-
-    ; --- Coffee mug: OAM entry 1, position (24, 130), tile 2, palette 4 ---
-    ; Far-left on desk surface
-    lda #24
-    sta OAM_BUF+4.w             ; X low
-    lda #130
-    sta OAM_BUF+5.w             ; Y
-    lda #$08                     ; Tile 8
-    sta OAM_BUF+6.w
-    lda #%00100100               ; Priority 2, palette 4
-    sta OAM_BUF+7.w
-
-    ; --- Doc icon: OAM entry 2, position (80, 108), tile 2, palette 1 ---
-    ; Center-left, above desk
-    lda #80
-    sta OAM_BUF+8.w
-    lda #108
-    sta OAM_BUF+9.w
-    lda #$02                     ; Tile 2
-    sta OAM_BUF+10.w
-    lda #%00100001               ; Priority 2, palette 1
-    sta OAM_BUF+11.w
-
-    ; --- Spreadsheet icon: OAM entry 3, position (152, 108), tile 4, palette 2 ---
-    ; Center-right, above desk
-    lda #152
-    sta OAM_BUF+12.w
-    lda #108
-    sta OAM_BUF+13.w
-    lda #$04                     ; Tile 4
-    sta OAM_BUF+14.w
-    lda #%00100010               ; Priority 2, palette 2
-    sta OAM_BUF+15.w
-
-    ; --- Floppy icon: OAM entry 4, position (224, 130), tile 6, palette 3 ---
-    ; Far-right on desk surface
-    lda #224
-    sta OAM_BUF+16.w
-    lda #130
-    sta OAM_BUF+17.w
-    lda #$06                     ; Tile 6
-    sta OAM_BUF+18.w
-    lda #%00100011               ; Priority 2, palette 3
-    sta OAM_BUF+19.w
-
-    ; --- OAM high table: set all 4 icons to large (16x16) ---
-    ; High table byte 0: sprites 0-3 (2 bits each)
-    ; Sprite 0 (cursor) = bits 1:0 → already set to large by cursor_update
-    ; Sprite 1 (doc) = bits 3:2 → set bit 3 (large)
-    ; Sprite 2 (sheet) = bits 5:4 → set bit 5 (large)
-    ; Sprite 3 (floppy) = bits 7:6 → set bit 7 (large)
-    ; Note: cursor_update writes OAM_BUF_HI byte 0 every frame, we need
-    ; to OR our bits in. But cursor_update only touches bits 1:0.
-    ; Actually cursor_update writes the full byte. Let's handle this
-    ; by setting all bits here — cursor_update will override bits 1:0 each frame.
-    lda #%10101010               ; All 4 sprites large (bits 1,3,5,7)
-    sta OAM_BUF_HI.w
-
-    ; High table byte 1: sprite 4 (coffee mug) = bits 1:0
-    lda #%00000010               ; Sprite 4 large
-    sta OAM_BUF_HI+1.w
 
     rts
