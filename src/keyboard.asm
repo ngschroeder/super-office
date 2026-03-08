@@ -949,8 +949,8 @@ _kbd_update_highlight:
     asl A
     tax
 
-    ; Color 1 of sub-palette 3 = CGRAM byte address (3*4+1)*2 = 26 = $1A
-    lda #$1A
+    ; Color 1 of sub-palette 3 = CGRAM word address 3*4+1 = 13 = $0D
+    lda #$0D
     sta vram_wq_data.w,X
     lda #$FF                     ; CGRAM marker
     sta vram_wq_data+1.w,X
@@ -963,8 +963,8 @@ _kbd_update_highlight:
     inx
     inx
 
-    ; Color 2 of sub-palette 3 = CGRAM byte address (3*4+2)*2 = 28 = $1C
-    lda #$1C
+    ; Color 2 of sub-palette 3 = CGRAM word address 3*4+2 = 14 = $0E
+    lda #$0E
     sta vram_wq_data.w,X
     lda #$FF
     sta vram_wq_data+1.w,X
@@ -1095,7 +1095,7 @@ _kbd_update_highlight:
     tax
 
     ; Color 1 → yellow ($03FF)
-    lda #$1A
+    lda #$0D
     sta vram_wq_data.w,X
     lda #$FF
     sta vram_wq_data+1.w,X
@@ -1109,7 +1109,7 @@ _kbd_update_highlight:
     inx
 
     ; Color 2 → dark yellow ($01AD)
-    lda #$1C
+    lda #$0E
     sta vram_wq_data.w,X
     lda #$FF
     sta vram_wq_data+1.w,X
