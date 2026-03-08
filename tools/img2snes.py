@@ -91,70 +91,111 @@ def nearest_color(color, palette):
     return best
 
 def assign_palettes(tiles_data, num_palettes=8, colors_per_pal=16):
-    """Assign tiles to sub-palettes using greedy bin-packing."""
-    # Each palette is a set of colors (max 16 including color 0)
-    # Color 0 is transparent - we'll use the most common background color
-
-    # Collect color sets per tile
+    """Assign tiles to sub-palettes using greedy bin-packing with refinement.
+    Tries multiple orderings and picks the one with fewest remapped tiles."""
+    import random
     tile_color_sets = [tile_colors(t) for t in tiles_data]
 
-    # Find the most common color (likely background)
-    all_color_counts = Counter()
-    for cs in tile_color_sets:
-        for c in cs:
-            all_color_counts[c] += 1
+    # Try multiple orderings, keep the best result
+    orderings = [
+        sorted(range(len(tiles_data)),
+               key=lambda i: len(tile_color_sets[i]), reverse=True),  # most constrained
+        list(range(len(tiles_data))),  # spatial (top-left to bottom-right)
+        sorted(range(len(tiles_data)),
+               key=lambda i: len(tile_color_sets[i])),  # least constrained first
+    ]
+    # Add randomized orderings
+    rng = random.Random(42)
+    for _ in range(20):
+        order = list(range(len(tiles_data)))
+        rng.shuffle(order)
+        orderings.append(order)
 
-    # Initialize palettes - each starts with the background color
-    palettes = [set() for _ in range(num_palettes)]
+    best_remaps = float('inf')
+    best_assignments = None
+    best_palettes = None
 
-    # Sort tiles by number of unique colors (most constrained first)
-    tile_indices = sorted(range(len(tiles_data)),
-                         key=lambda i: len(tile_color_sets[i]), reverse=True)
+    for order in orderings:
+        palettes = [set() for _ in range(num_palettes)]
+        assignments = [None] * len(tiles_data)
+        remaps = 0
 
-    assignments = [None] * len(tiles_data)
+        for ti in order:
+            tc = tile_color_sets[ti]
+            best_pal = None
+            best_new_colors = float('inf')
 
-    for ti in tile_indices:
-        tc = tile_color_sets[ti]
-        best_pal = None
-        best_new_colors = float('inf')
-
-        for pi in range(num_palettes):
-            # How many new colors would this palette need?
-            new_colors = len(tc - palettes[pi])
-            total = len(palettes[pi]) + new_colors
-            if total <= colors_per_pal:
-                if new_colors < best_new_colors:
-                    best_new_colors = new_colors
-                    best_pal = pi
-
-        if best_pal is not None:
-            palettes[best_pal] |= tc
-            assignments[ti] = best_pal
-        else:
-            # No palette can fit this tile - find least-bad option
-            # Pick palette with most overlap
-            best_pal = 0
-            best_overlap = -1
             for pi in range(num_palettes):
-                overlap = len(tc & palettes[pi])
-                if overlap > best_overlap:
-                    best_overlap = overlap
-                    best_pal = pi
+                new_colors = len(tc - palettes[pi])
+                total = len(palettes[pi]) + new_colors
+                if total <= colors_per_pal:
+                    if new_colors < best_new_colors:
+                        best_new_colors = new_colors
+                        best_pal = pi
 
-            # Remap tile colors to fit in this palette
-            assignments[ti] = best_pal
-            # Colors that ARE in palette stay, others get mapped to nearest
-            pal_colors = list(palettes[best_pal])
-            remapped_tile = []
-            for row in tiles_data[ti]:
-                new_row = []
-                for c in row:
-                    if c in palettes[best_pal]:
-                        new_row.append(c)
-                    else:
-                        new_row.append(nearest_color(c, pal_colors))
-                remapped_tile.append(new_row)
-            tiles_data[ti] = remapped_tile
+            if best_pal is not None:
+                palettes[best_pal] |= tc
+                assignments[ti] = best_pal
+            else:
+                remaps += 1
+                best_pal = 0
+                best_overlap = -1
+                for pi in range(num_palettes):
+                    overlap = len(tc & palettes[pi])
+                    if overlap > best_overlap:
+                        best_overlap = overlap
+                        best_pal = pi
+                assignments[ti] = best_pal
+
+        if remaps < best_remaps:
+            best_remaps = remaps
+            best_assignments = assignments[:]
+            best_palettes = [s.copy() for s in palettes]
+            if remaps == 0:
+                break
+
+    print(f"  Best ordering: {best_remaps} remapped tiles")
+    assignments = best_assignments
+    palettes = best_palettes
+
+    # Apply remapping for tiles that couldn't fit
+    if best_remaps > 0:
+        for ti in range(len(tiles_data)):
+            tc = tile_color_sets[ti]
+            pi = assignments[ti]
+            if not tc.issubset(palettes[pi]):
+                pal_colors = list(palettes[pi])
+                remapped_tile = []
+                for row in tiles_data[ti]:
+                    new_row = []
+                    for c in row:
+                        if c in palettes[pi]:
+                            new_row.append(c)
+                        else:
+                            new_row.append(nearest_color(c, pal_colors))
+                    remapped_tile.append(new_row)
+                tiles_data[ti] = remapped_tile
+
+    # --- Refinement pass: fix tiles where ANY color was lost ---
+    refine_count = 0
+    for ti in range(len(tiles_data)):
+        tc = tile_color_sets[ti]  # Original colors
+        pi = assignments[ti]
+        lost = tc - palettes[pi]
+        if not lost:
+            continue
+
+        # Try to find a palette that contains ALL this tile's colors
+        for cpi in range(num_palettes):
+            new_colors = len(tc - palettes[cpi])
+            if len(palettes[cpi]) + new_colors <= colors_per_pal:
+                palettes[cpi] |= tc
+                assignments[ti] = cpi
+                refine_count += 1
+                break
+
+    if refine_count > 0:
+        print(f"  Refinement: {refine_count} tiles reassigned to preserve colors")
 
     return assignments, palettes
 
@@ -219,6 +260,12 @@ def convert(input_path, out_pal, out_tiles, out_map, num_palettes=8):
     for y in range(h):
         for x in range(w):
             pixels[x, y] = snap_pixel(*pixels[x, y])
+
+    unique_colors = set()
+    for y in range(h):
+        for x in range(w):
+            unique_colors.add(pixels[x, y])
+    print(f"  After SNES snap: {len(unique_colors)} unique colors")
 
     # Step 2: Extract and quantize each tile to <=16 colors
     tiles = []
