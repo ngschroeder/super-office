@@ -158,9 +158,9 @@ nmi_handler:
     ; ===================================================================
     stz BG1HOFS.w
     stz BG1HOFS.w
-    lda #$FE                     ; VOFS -1 compensates for PPU scroll quirk
+    lda bg1_scroll_y.w           ; BG1 vertical scroll (default $FE)
     sta BG1VOFS.w
-    sta BG1VOFS.w
+    stz BG1VOFS.w                ; High byte always 0
     stz BG2HOFS.w
     stz BG2HOFS.w
     lda #$FE

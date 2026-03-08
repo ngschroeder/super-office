@@ -253,8 +253,8 @@ title_img_map_end:
 ; Uses palette 7 (PAL7_HI) for white text on transparent background.
 ; ============================================================================
 
-; Row 21: "CREATE NEW" small font, starting at col 10
-title_text_row21:
+; Row 24: "CREATE NEW" small font, starting at col 10
+title_text_row24:
 .db TILE_BLANK, PAL7_HI   ; arrow placeholder
 .db TILE_C, PAL7_HI
 .db TILE_R, PAL7_HI
@@ -266,12 +266,12 @@ title_text_row21:
 .db TILE_N, PAL7_HI
 .db TILE_E, PAL7_HI
 .db TILE_W, PAL7_HI
-title_text_row21_end:
-.define TITLE_ROW21_COL 10
-.define TITLE_ROW21_LEN 11
+title_text_row24_end:
+.define TITLE_ROW24_COL 10
+.define TITLE_ROW24_LEN 11
 
-; Row 23: "OPEN FILE" small font, starting at col 10
-title_text_row23:
+; Row 26: "OPEN FILE" small font, starting at col 10
+title_text_row26:
 .db TILE_BLANK, PAL7_HI   ; arrow placeholder
 .db TILE_O, PAL7_HI
 .db TILE_P, PAL7_HI
@@ -282,6 +282,6 @@ title_text_row23:
 .db TILE_I, PAL7_HI
 .db TILE_L, PAL7_HI
 .db TILE_E, PAL7_HI
-title_text_row23_end:
-.define TITLE_ROW23_COL 10
-.define TITLE_ROW23_LEN 10
+title_text_row26_end:
+.define TITLE_ROW26_COL 10
+.define TITLE_ROW26_LEN 10

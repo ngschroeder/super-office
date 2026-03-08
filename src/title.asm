@@ -134,6 +134,10 @@ title_init:
     sta TM.w
     sta SHADOW_TM.w
 
+    ; === Set BG1 scroll to shift menu text up 12 pixels ===
+    lda #(12 - 1)               ; 12px offset, -1 for PPU scroll quirk
+    sta bg1_scroll_y.w
+
     ; === Initialize fade: start from black, fade in ===
     lda #FADE_IN
     sta fade_dir.w
@@ -147,9 +151,12 @@ title_init:
     sta title_menu_sel.w
     sta title_prev_sel.w
 
-    ; Hide selection arrow (OAM entry 5, Y = $F0 = off-screen)
+    ; Fully initialize selection arrow sprite (OAM entry 5) off-screen
+    stz OAM_BUF+20.w            ; X = 0
     lda #$F0
-    sta OAM_BUF+21.w
+    sta OAM_BUF+21.w            ; Y = $F0 (off-screen)
+    stz OAM_BUF+22.w            ; Tile = 0
+    stz OAM_BUF+23.w            ; Attr = 0 (no flip, priority 0, palette 0)
 
     ; Un-force blank (brightness 0 — black but rendering active)
     stz INIDISP.w
@@ -199,6 +206,9 @@ state_title:
 
 @fade_out_done:
     stz fade_dir.w
+    ; Restore default BG1 scroll before leaving title
+    lda #$FE
+    sta bg1_scroll_y.w
     ; Transition to next state based on menu selection
     lda title_menu_sel.w
     beq @goto_type_sel           ; 0 = CREATE NEW → type selection
@@ -318,10 +328,10 @@ _title_update_menu_arrow:
 
     lda title_menu_sel.w
     beq @arrow_row0
-    lda #184                     ; Row 23 * 8 = 184
+    lda #196                     ; Row 26 visual Y (208 - 12px scroll)
     bra @set_arrow_y
 @arrow_row0:
-    lda #168                     ; Row 21 * 8 = 168
+    lda #180                     ; Row 24 visual Y (192 - 12px scroll)
 @set_arrow_y:
     sta OAM_BUF+21.w
 
@@ -384,31 +394,31 @@ _title_build_bg1_map:
     ; Set up DMA mode 1 and bank once
     lda #$01                     ; Mode 1 (increment, two regs)
     sta DMAP0.w
-    lda #:title_text_row21
+    lda #:title_text_row24
     sta A1B0.w
 
-    ; Row 21: "CREATE NEW"
+    ; Row 24: "CREATE NEW"
     rep #$20
     .ACCU 16
-    lda #VRAM_BG1_MAP + (21 * 32) + TITLE_ROW21_COL
+    lda #VRAM_BG1_MAP + (24 * 32) + TITLE_ROW24_COL
     sta VMADDL.w
-    lda #title_text_row21
+    lda #title_text_row24
     sta A1T0L.w
-    lda #title_text_row21_end - title_text_row21
+    lda #title_text_row24_end - title_text_row24
     sta DAS0L.w
     sep #$20
     .ACCU 8
     lda #$01
     sta MDMAEN.w
 
-    ; Row 23: "OPEN FILE"
+    ; Row 26: "OPEN FILE"
     rep #$20
     .ACCU 16
-    lda #VRAM_BG1_MAP + (23 * 32) + TITLE_ROW23_COL
+    lda #VRAM_BG1_MAP + (26 * 32) + TITLE_ROW26_COL
     sta VMADDL.w
-    lda #title_text_row23
+    lda #title_text_row26
     sta A1T0L.w
-    lda #title_text_row23_end - title_text_row23
+    lda #title_text_row26_end - title_text_row26
     sta DAS0L.w
     sep #$20
     .ACCU 8

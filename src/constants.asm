@@ -56,6 +56,7 @@
 .define SHADOW_COLDATA  $5E      ; -> $2132
 .define SHADOW_NMITIMEN $5F      ; -> $4200
 .define SHADOW_HDMAEN   $60      ; -> $420C
+.define SHADOW_BG1VOFS  $61      ; -> $210E (low byte; high always 0)
 
 ; --- VRAM layout (word addresses) ---
 ; OBJSEL bbb field: base = bbb * $2000. Valid bases: $0000,$2000,$4000,$6000,...
@@ -117,16 +118,16 @@
 .define kbd_old_row     $89      ; Previous cursor row (for unhighlight)
 
 ; --- Title screen menu hit boxes (pixel coords) ---
-; "CREATE NEW" at tile row 21, cols 11-20
+; "CREATE NEW" at tile row 24, scrolled up 12px → visual Y 180
 .define MENU0_X1        88
 .define MENU0_X2        167
-.define MENU0_Y1        160
-.define MENU0_Y2        175
-; "OPEN FILE" at tile row 23, cols 11-19
+.define MENU0_Y1        180
+.define MENU0_Y2        195
+; "OPEN FILE" at tile row 26, scrolled up 12px → visual Y 196
 .define MENU1_X1        88
 .define MENU1_X2        167
-.define MENU1_Y1        176
-.define MENU1_Y2        191
+.define MENU1_Y1        196
+.define MENU1_Y2        211
 
 ; --- Large title font tile indices (16x16, 4 tiles each: TL,TR,BL,BR) ---
 .define BIG_S           1        ; tiles 1-4
@@ -302,6 +303,7 @@
 .define vram_wq_count   $B8      ; Number of pending writes (0-10)
 .define vram_wq_data    $B9      ; Write queue: 10 entries × 4 bytes ($B9-$E0)
                                  ; Each entry: addr_lo, addr_hi, tile, attr
+.define bg1_scroll_y    $E1      ; BG1 vertical scroll offset (default $FE)
 
 ; --- Tilemap palette bits (shifted for tilemap entry high byte) ---
 ; Tilemap entry: VHOPPPcc cccccccc  (PPP = palette 0-7)

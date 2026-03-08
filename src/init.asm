@@ -266,6 +266,10 @@ init_reset:
     sep #$20                     ; 8-bit A
     .ACCU 8
 
+    ; === Initialize BG1 vertical scroll (default: -1 for PPU quirk) ===
+    lda #$FE
+    sta bg1_scroll_y.w
+
     ; === Initialize state machine ===
     lda #STATE_BOOT
     sta current_state.w
