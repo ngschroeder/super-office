@@ -38,6 +38,12 @@ Built entirely in 65816 assembly with heavy assistance from [Claude Code](https:
 - Right-click to go back, open menus, and cancel
 - No joypad required or supported
 
+
+
+https://github.com/user-attachments/assets/27d2ae0b-108f-4aa7-ba97-f9ff4c01ee1f
+
+
+
 ## Building
 
 ### Prerequisites
