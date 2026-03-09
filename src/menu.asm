@@ -99,8 +99,8 @@ type_sel_init:
     sta SHADOW_TM.w
     sta TM.w
 
-    ; Mode 1 with BG3 priority
-    lda #$09
+    ; Mode 1 (no BG3 priority — that mode puts BG3 pri=1 above all sprites)
+    lda #$01
     sta SHADOW_BGMODE.w
     sta BGMODE.w
 
@@ -602,7 +602,7 @@ file_brw_init:
     sta SHADOW_TM.w
     sta TM.w
 
-    lda #$09
+    lda #$01                     ; Mode 1 (no BG3 priority — cursor must be above text)
     sta SHADOW_BGMODE.w
     sta BGMODE.w
 
@@ -1465,7 +1465,7 @@ options_init:
     sta SHADOW_TM.w
     sta TM.w
 
-    lda #$09                     ; Mode 1 + BG3 priority
+    lda #$01                     ; Mode 1 (no BG3 priority — cursor must be above text)
     sta SHADOW_BGMODE.w
     sta BGMODE.w
 
