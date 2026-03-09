@@ -277,6 +277,9 @@ _title_check_menu_hover:
 
 @check_menu1:
     ; --- Check menu item 1: "OPEN FILE" ---
+    ; WLA-DX width restore: branches here come from 16-bit A mode
+    ; (the preceding sep #$20 is only reached on the menu 0 hit path)
+    .ACCU 16
     lda cursor_x.w
     cmp #MENU1_X1
     bcc @no_hover
