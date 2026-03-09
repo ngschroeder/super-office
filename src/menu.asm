@@ -202,7 +202,9 @@ state_type_sel:
     lda menu_sel.w
     cmp #$FF
     beq @no_click_ts
-    ; Start fade out
+    ; Play menu select SFX and start fade out
+    lda #SFX_MENU_SEL
+    jsr play_sfx
     lda #FADE_OUT
     sta fade_dir.w
     rts
@@ -213,6 +215,8 @@ state_type_sel:
     beq @no_back
 
     ; Fade out, then return to boot (re-init title)
+    lda #SFX_MENU_SEL
+    jsr play_sfx
     lda #FADE_OUT
     sta fade_dir.w
     lda #$FE                     ; Special: go back to title
@@ -1224,6 +1228,9 @@ _fb_update_delete_confirm:
     ; YES = delete
     lda fb_sel.w
     jsr sram_delete_file
+    ; Play delete SFX
+    lda #SFX_DELETE
+    jsr play_sfx
     ; Refresh directory and re-render
     jsr sram_get_directory
     stz fb_confirm_del.w

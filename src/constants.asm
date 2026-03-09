@@ -304,6 +304,7 @@
 .define vram_wq_data    $B9      ; Write queue: 10 entries × 4 bytes ($B9-$E0)
                                  ; Each entry: addr_lo, addr_hi, tile, attr
 .define bg1_scroll_y    $E1      ; BG1 vertical scroll offset (default $FE)
+                                 ; $E2+ used by audio system (see audio.asm)
 
 ; --- Tilemap palette bits (shifted for tilemap entry high byte) ---
 ; Tilemap entry: VHOPPPcc cccccccc  (PPP = palette 0-7)

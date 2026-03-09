@@ -310,6 +310,9 @@ _kbd_press_key:
 
     ; Store character output
     sta kbd_char_out.w
+    ; Play key click sound effect
+    lda #SFX_KEY_CLICK
+    jsr play_sfx
 
 @done:
     rts

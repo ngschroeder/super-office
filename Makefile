@@ -14,7 +14,7 @@ LNKFLAGS = -r
 
 all: $(ROM)
 
-$(OBJ): $(SRC) $(wildcard src/*.asm) $(wildcard gfx/*.asm)
+$(OBJ): $(SRC) $(wildcard src/*.asm) $(wildcard gfx/*.asm) $(wildcard spc/*.asm)
 	$(AS) $(ASFLAGS) $(OBJ) $(SRC)
 
 $(ROM): $(OBJ) linkfile

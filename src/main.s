@@ -32,6 +32,7 @@
 .INCLUDE "textdoc.asm"       ; Text document editor (Phase 4)
 .INCLUDE "spreadsheet.asm"   ; Spreadsheet editor (Phase 5)
 .INCLUDE "save.asm"          ; SRAM save/load system (Phase 6)
+.INCLUDE "audio.asm"         ; Audio engine API (Phase 7)
 .INCLUDE "states.asm"        ; Top-level state machine dispatch
 
 ; --- Graphics data ---
@@ -39,3 +40,9 @@
 .INCLUDE "gfx/title.asm"    ; Title screen tiles, tilemaps, palettes
 .INCLUDE "gfx/keyboard.asm" ; Keyboard font tiles and palette
 .INCLUDE "gfx/textfont.asm" ; Text editor 4bpp font + ASCII table
+
+; --- Audio data ---
+.INCLUDE "spc/driver.asm"   ; SPC700 driver binary blob
+.INCLUDE "spc/samples.asm"  ; BRR waveform data + sample directory
+.INCLUDE "spc/sfx.asm"      ; Sound effect definitions
+.INCLUDE "spc/songs.asm"    ; Music sequence data

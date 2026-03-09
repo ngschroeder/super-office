@@ -248,6 +248,9 @@ init_reset:
     ; === Initialize SRAM (check/format on first boot) ===
     jsr sram_init
 
+    ; === Initialize audio engine (upload SPC700 driver + data) ===
+    jsr audio_init
+
     ; === Initialize save system variables ===
     lda #$FF
     sta current_slot.w           ; No file loaded yet

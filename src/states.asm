@@ -206,6 +206,7 @@ state_fmenu:
     rts
 @sfm_fade_out_done:
     stz fade_dir.w
+    jsr stop_music
     jsr kbd_hide
     ; Reset editor init flags for clean re-entry
     stz doc_initialized.w

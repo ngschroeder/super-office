@@ -152,6 +152,10 @@ title_init:
     sta title_menu_sel.w
     stz title_prev_sel.w
 
+    ; === Start title music ===
+    lda #SONG_TITLE
+    jsr play_music
+
     ; Un-force blank (brightness 0 — black but rendering active)
     stz INIDISP.w
 
@@ -230,7 +234,10 @@ state_title:
     cmp #$FF
     beq @no_click
 
-    ; Menu item clicked! Start fade out.
+    ; Menu item clicked! Play SFX and start fade out.
+    lda #SFX_MENU_SEL
+    jsr play_sfx
+    jsr stop_music
     lda #FADE_OUT
     sta fade_dir.w
     rts

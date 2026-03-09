@@ -992,6 +992,9 @@ fmenu_update:
     ; Save to current slot
     lda current_slot.w
     jsr sram_save_file
+    ; Play save success SFX
+    lda #SFX_SAVE_OK
+    jsr play_sfx
     ; Brief feedback: update status bar text to show "SAVED"
     jsr _fmenu_show_saved
     rts
@@ -1410,6 +1413,10 @@ _dialog_update_name:
     ; Save to the found slot
     jsr sram_save_file
 
+    ; Play save success SFX
+    lda #SFX_SAVE_OK
+    jsr play_sfx
+
     ; Show "SAVED" feedback and trigger status bar re-render
     jsr _fmenu_show_saved
 
@@ -1420,7 +1427,9 @@ _dialog_update_name:
     rts
 
 @dn_full:
-    ; TODO: show "NO FREE SLOTS" message
+    ; No free slots — play error SFX
+    lda #SFX_ERROR
+    jsr play_sfx
     ; For now, just dismiss
     stz dialog_visible.w
     jsr _dialog_clear_area
@@ -1821,6 +1830,8 @@ _dialog_update_dirty:
     cmp #1
     beq @dd_no
     ; Cancel — dismiss dialog
+    lda #SFX_ERROR
+    jsr play_sfx
     stz dialog_visible.w
     jsr _dialog_clear_dirty
     rts
@@ -1834,6 +1845,9 @@ _dialog_update_dirty:
     beq @dd_yes_save_as
     ; Save to existing slot
     jsr sram_save_file
+    ; Play save success SFX
+    lda #SFX_SAVE_OK
+    jsr play_sfx
     lda #FADE_OUT
     sta fade_dir.w
     rts

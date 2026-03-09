@@ -237,6 +237,10 @@ spreadsheet_init:
     stz SHADOW_INIDISP.w
     stz INIDISP.w
 
+    ; === Start editor music ===
+    lda #SONG_EDITOR
+    jsr play_music
+
     rts
 
 
@@ -287,6 +291,7 @@ state_sheet:
     rts
 @ss_fade_out_done:
     stz fade_dir.w
+    jsr stop_music
     jsr kbd_hide
     stz sheet_initialized.w
     lda #STATE_BOOT
