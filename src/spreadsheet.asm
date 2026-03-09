@@ -858,6 +858,9 @@ _sheet_render_status:
     cmp save_name_len.w          ; 8-bit compare: counter vs length
     bcs @status_name_done
     lda save_name_buf.w,Y
+    beq @status_name_blank       ; Null byte → blank tile
+    cmp #$20
+    bcc @status_name_blank       ; Control char → blank tile
     ; Convert ASCII to tile index: subtract $20, look up in table
     sec
     sbc #$20
@@ -867,6 +870,10 @@ _sheet_render_status:
     ldx $0E
     lda ascii_to_tile.w,X
     ply
+    bra @status_name_write
+@status_name_blank:
+    lda #$00                     ; Tile 0 = blank
+@status_name_write:
     sta VMDATAL.w
     lda #$28                     ; Priority=1, PPP=2 (gray)
     sta VMDATAH.w
