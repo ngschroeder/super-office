@@ -131,6 +131,39 @@ spreadsheet_init:
     lda #$01
     sta MDMAEN.w
 
+    ; === Upload box overlay palettes BEFORE kbd_show (CGRAM 48+ survives kbd_show) ===
+    ; Box normal palette → CGRAM 48-63 (sub-palette 3)
+    lda #48
+    sta CGADD.w
+    lda #:box_palette
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #box_palette
+    sta A1T0L.w
+    lda #box_palette_end - box_palette
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; Box highlight palette → CGRAM 64-79 (sub-palette 4)
+    lda #64
+    sta CGADD.w
+    lda #:box_pal_highlight
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #box_pal_highlight
+    sta A1T0L.w
+    lda #box_pal_highlight_end - box_pal_highlight
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
     ; === Clear BG1 tilemap via fixed-source DMA ===
     lda #$80
     sta VMAIN.w
@@ -389,39 +422,6 @@ spreadsheet_init:
     lda #sheet_pal_headers
     sta A1T0L.w
     lda #sheet_pal_headers_end - sheet_pal_headers
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; === Upload box overlay palettes (for file menu/dialogs on BG1) ===
-    ; Box normal palette → CGRAM 48-63 (sub-palette 3)
-    lda #48
-    sta CGADD.w
-    lda #:box_palette
-    sta A1B0.w
-    rep #$20
-    .ACCU 16
-    lda #box_palette
-    sta A1T0L.w
-    lda #box_palette_end - box_palette
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Box highlight palette → CGRAM 64-79 (sub-palette 4)
-    lda #64
-    sta CGADD.w
-    lda #:box_pal_highlight
-    sta A1B0.w
-    rep #$20
-    .ACCU 16
-    lda #box_pal_highlight
-    sta A1T0L.w
-    lda #box_pal_highlight_end - box_pal_highlight
     sta DAS0L.w
     sep #$20
     .ACCU 8

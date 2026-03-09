@@ -1826,6 +1826,7 @@ _dialog_show_dirty:
     _write_box_tile BOX_FILL_4                ; space
     _write_box_tile BOX_FILL_4                ; space
     _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
     lda #BOX_VEDGE_4
     sta VMDATAL.w
     lda #BOX_PAL | $40           ; H-flip (right edge)
