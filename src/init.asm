@@ -251,7 +251,7 @@ init_reset:
     ; === Initialize options defaults ===
     lda #$01
     sta opt_music_on.w           ; Music on by default
-    lda #$03
+    lda #$01
     sta opt_volume.w             ; Volume level 3 (60%) by default
 
     ; === Initialize audio engine (upload SPC700 driver + data) ===
