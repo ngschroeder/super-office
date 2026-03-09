@@ -211,7 +211,20 @@
 .define KBD_TILE_USCORE 84       ; _ (8x8, used by save cursor)
 .define KBD_TILE_HLINE  85       ; ─ horizontal separator (8x8)
 .define KBD_TILE_PLUS   86       ; + (8x8)
-; Tiles 87-94 = Old spacebar tiles (8x8, legacy)
+.define BOX_FILL        87       ; Solid fill tile (all color 1) — BG3 2bpp
+.define BOX_CORNER_TL   88       ; Box corner top-left — BG3 2bpp
+.define BOX_HEDGE       89       ; Box horizontal edge — BG3 2bpp
+.define BOX_VEDGE       90       ; Box vertical edge — BG3 2bpp
+; Tiles 91-94 = Old spacebar tiles (8x8, unused legacy)
+
+; 4bpp opaque box tiles for BG1 file menu/dialog overlays (no transparent pixels)
+.define BOX_FILL_4      61       ; 4bpp solid fill tile
+.define BOX_CORNER_4    62       ; 4bpp box corner TL (flip for others)
+.define BOX_HEDGE_4     63       ; 4bpp box horizontal edge
+.define BOX_VEDGE_4     64       ; 4bpp box vertical edge
+.define BOX_TEXT_BASE   65       ; Base for opaque font tiles (add font tile index)
+.define BOX_PAL         $0C     ; BG1 attribute: PPP=3 (box normal)
+.define BOX_PAL_HL      $10     ; BG1 attribute: PPP=4 (box highlight)
 
 ; --- New 16x16 key tile indices (BG3 chr, tiles 95+) ---
 .define KBD16_TL         95      ; Shared top-left frame tile

@@ -39,10 +39,16 @@
 .INCLUDE "gfx/cursor.asm"   ; Cursor sprite tiles and palette
 .INCLUDE "gfx/title.asm"    ; Title screen tiles, tilemaps, palettes
 .INCLUDE "gfx/keyboard.asm" ; Keyboard font tiles and palette
-.INCLUDE "gfx/textfont.asm" ; Text editor 4bpp font + ASCII table
+.INCLUDE "gfx/asciitable.asm" ; ASCII-to-tile lookup (must stay in bank 0)
 
 ; --- Audio data ---
 .INCLUDE "spc/driver.asm"   ; SPC700 driver binary blob
 .INCLUDE "spc/samples.asm"  ; BRR waveform data + sample directory
 .INCLUDE "spc/sfx.asm"      ; Sound effect definitions
 .INCLUDE "spc/songs.asm"    ; Music sequence data
+
+; --- Bank 2: Large tile data (accessed only via DMA) ---
+; Bank 1 is already used by gfx/title.asm (title_img_tiles + title_img_map)
+.BANK 2 SLOT 0
+.ORG $0000
+.INCLUDE "gfx/textfont.asm" ; Text editor 4bpp font tiles + palettes

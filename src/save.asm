@@ -691,7 +691,8 @@ fmenu_open:
     lda #$FF
     sta fmenu_prev_sel.w
 
-    ; Draw menu box on BG3 tilemap (rows 8-14, cols 10-21)
+    ; Draw menu box on BG1 tilemap (rows 8-14, cols 10-21)
+    ; Uses opaque 4bpp box tiles — renders above BG2 grid, below cursor sprite
     ; Force blank for VRAM writes
     lda #$8F
     sta INIDISP.w
@@ -701,131 +702,188 @@ fmenu_open:
     rep #$10
     .INDEX 16
 
-    ; --- Draw top border (row 8) ---
+    ; --- Row 8: top border (TL corner + 10× h-edge + TR corner) ---
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (8 * 32) + 10
+    lda #VRAM_BG1_MAP + (8 * 32) + 10
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    lda #KBD_TILE_HLINE          ; ─
-    ldy #12                      ; 12 tiles wide
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    lda #BOX_HEDGE_4
+    ldy #10
 @fm_top:
     sta VMDATAL.w
     pha
-    lda #$30                     ; PPP=4 (text label) + priority
+    lda #BOX_PAL
     sta VMDATAH.w
     pla
     dey
     bne @fm_top
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (TR corner)
+    sta VMDATAH.w
 
-    ; --- Row 9: blank (spacer) ---
+    ; --- Row 9: spacer (L edge + 10× fill + R edge) ---
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (9 * 32) + 10
+    lda #VRAM_BG1_MAP + (9 * 32) + 10
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    ldy #12
-@fm_r9:
-    stz VMDATAL.w
-    lda #$30
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
     sta VMDATAH.w
+    lda #BOX_FILL_4
+    ldy #10
+@fm_r9:
+    sta VMDATAL.w
+    pha
+    lda #BOX_PAL
+    sta VMDATAH.w
+    pla
     dey
     bne @fm_r9
-
-    ; --- Row 10: "  SAVE      " ---
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG3_MAP + (10 * 32) + 10
-    sta VMADDL.w
-    sep #$20
-    .ACCU 8
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 19               ; S
-    _write_tile 1                ; A
-    _write_tile 22               ; V
-    _write_tile 5                ; E
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-
-    ; --- Row 11: "  SAVE AS   " ---
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG3_MAP + (11 * 32) + 10
-    sta VMADDL.w
-    sep #$20
-    .ACCU 8
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 19               ; S
-    _write_tile 1                ; A
-    _write_tile 22               ; V
-    _write_tile 5                ; E
-    _write_tile 0                ; space
-    _write_tile 1                ; A
-    _write_tile 19               ; S
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-
-    ; --- Row 12: "  CLOSE     " ---
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG3_MAP + (12 * 32) + 10
-    sta VMADDL.w
-    sep #$20
-    .ACCU 8
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 3                ; C
-    _write_tile 12               ; L
-    _write_tile 15               ; O
-    _write_tile 19               ; S
-    _write_tile 5                ; E
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-
-    ; --- Row 13: blank (spacer) ---
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG3_MAP + (13 * 32) + 10
-    sta VMADDL.w
-    sep #$20
-    .ACCU 8
-    ldy #12
-@fm_r13:
-    stz VMDATAL.w
-    lda #$30
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
     sta VMDATAH.w
+
+    ; --- Rows 10-12: text rows (L edge + 10 interior tiles + R edge) ---
+    ; Row 10: " SAVE     "
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (10 * 32) + 10
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+19          ; S
+    _write_box_tile BOX_TEXT_BASE+1           ; A
+    _write_box_tile BOX_TEXT_BASE+22          ; V
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
+
+    ; Row 11: " SAVE AS  "
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (11 * 32) + 10
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+19          ; S
+    _write_box_tile BOX_TEXT_BASE+1           ; A
+    _write_box_tile BOX_TEXT_BASE+22          ; V
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+1           ; A
+    _write_box_tile BOX_TEXT_BASE+19          ; S
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
+
+    ; Row 12: " CLOSE    "
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (12 * 32) + 10
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+3           ; C
+    _write_box_tile BOX_TEXT_BASE+12          ; L
+    _write_box_tile BOX_TEXT_BASE+15          ; O
+    _write_box_tile BOX_TEXT_BASE+19          ; S
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
+
+    ; --- Row 13: spacer (L edge + 10× fill + R edge) ---
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (13 * 32) + 10
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    lda #BOX_FILL_4
+    ldy #10
+@fm_r13:
+    sta VMDATAL.w
+    pha
+    lda #BOX_PAL
+    sta VMDATAH.w
+    pla
     dey
     bne @fm_r13
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
 
-    ; --- Bottom border (row 14) ---
+    ; --- Row 14: bottom border (BL corner + 10× h-edge + BR corner) ---
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (14 * 32) + 10
+    lda #VRAM_BG1_MAP + (14 * 32) + 10
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    lda #KBD_TILE_HLINE
-    ldy #12
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $80           ; V-flip (BL corner)
+    sta VMDATAH.w
+    lda #BOX_HEDGE_4
+    ldy #10
 @fm_bot:
     sta VMDATAL.w
     pha
-    lda #$30
+    lda #BOX_PAL | $80           ; V-flip (bottom edge)
     sta VMDATAH.w
     pla
     dey
     bne @fm_bot
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $C0           ; HV-flip (BR corner)
+    sta VMDATAH.w
 
     ; Restore display
     lda SHADOW_INIDISP.w
@@ -837,7 +895,7 @@ fmenu_open:
 
 
 ; ============================================================================
-; fmenu_close — Hide the file menu overlay, restore BG3 keyboard area
+; fmenu_close — Hide the file menu overlay, restore BG1 content
 ; Assumes: 8-bit A/X/Y
 ; ============================================================================
 fmenu_close:
@@ -846,7 +904,7 @@ fmenu_close:
 
     stz fmenu_visible.w
 
-    ; Clear the menu area on BG3 (rows 8-14, cols 10-21)
+    ; Clear the menu area on BG1 (rows 8-14, cols 10-21)
     lda #$8F
     sta INIDISP.w
     lda #$80
@@ -873,7 +931,7 @@ fmenu_close:
     asl A
     asl A                        ; × 32
     clc
-    adc #VRAM_BG3_MAP + 10
+    adc #VRAM_BG1_MAP + 10
     sta VMADDL.w
     sep #$20
     .ACCU 8
@@ -883,8 +941,7 @@ fmenu_close:
     ldx #12
 @fc_tile:
     stz VMDATAL.w
-    lda #$00
-    sta VMDATAH.w
+    stz VMDATAH.w
     dex
     bne @fc_tile
 
@@ -898,6 +955,16 @@ fmenu_close:
 
     sep #$10
     .INDEX 8
+
+    ; Set dirty flag to re-render editor content in cleared area
+    lda file_type.w
+    bne @fc_sheet
+    lda #$01
+    sta doc_dirty.w
+    rts
+@fc_sheet:
+    lda #$01
+    sta sheet_dirty.w
     rts
 
 
@@ -1072,7 +1139,7 @@ _fmenu_update_highlight:
     asl A
     asl A                        ; × 32
     clc
-    adc #VRAM_BG3_MAP + 10
+    adc #VRAM_BG1_MAP + 10
     sta VMADDL.w
     sep #$20
     .ACCU 8
@@ -1082,10 +1149,10 @@ _fmenu_update_highlight:
     tya
     cmp fmenu_sel.w
     bne @hl_normal
-    lda #$34                     ; PPP=5 (yellow text highlight) + priority
+    lda #BOX_PAL_HL              ; PPP=4 (yellow highlight) on BG1
     bra @hl_write
 @hl_normal:
-    lda #$30                     ; PPP=4 (white text label) + priority
+    lda #BOX_PAL                 ; PPP=3 (white box text) on BG1
 
 @hl_write:
     sta $06                      ; $06 = palette byte
@@ -1114,7 +1181,14 @@ _fmenu_update_highlight:
     ldx #_fm_saveas_tiles.w
 
 @hl_write_row:
-    ldy #12
+    ; Write left edge (vedge, normal orientation)
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+
+    ; Write 10 interior tiles from table
+    ldy #10
 @hl_tile:
     lda $0000.w,X
     sta VMDATAL.w
@@ -1123,6 +1197,13 @@ _fmenu_update_highlight:
     inx
     dey
     bne @hl_tile
+
+    ; Write right edge (vedge, H-flipped)
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda $06
+    ora #$40                     ; Add H-flip
+    sta VMDATAH.w
 
     ply
     plx
@@ -1138,13 +1219,13 @@ _fmenu_update_highlight:
     .INDEX 8
     rts
 
-; Menu row tile data (12 bytes each)
+; Menu row tile data (10 bytes each — interior tiles only, edges added by loop)
 _fm_save_tiles:
-    .db 0, 0, 19, 1, 22, 5, 0, 0, 0, 0, 0, 0       ; "  SAVE      "
+    .db BOX_FILL_4, BOX_TEXT_BASE+19, BOX_TEXT_BASE+1, BOX_TEXT_BASE+22, BOX_TEXT_BASE+5, BOX_FILL_4, BOX_FILL_4, BOX_FILL_4, BOX_FILL_4, BOX_FILL_4
 _fm_saveas_tiles:
-    .db 0, 0, 19, 1, 22, 5, 0, 1, 19, 0, 0, 0       ; "  SAVE AS   "
+    .db BOX_FILL_4, BOX_TEXT_BASE+19, BOX_TEXT_BASE+1, BOX_TEXT_BASE+22, BOX_TEXT_BASE+5, BOX_FILL_4, BOX_TEXT_BASE+1, BOX_TEXT_BASE+19, BOX_FILL_4, BOX_FILL_4
 _fm_close_tiles:
-    .db 0, 0, 3, 12, 15, 19, 5, 0, 0, 0, 0, 0       ; "  CLOSE     "
+    .db BOX_FILL_4, BOX_TEXT_BASE+3, BOX_TEXT_BASE+12, BOX_TEXT_BASE+15, BOX_TEXT_BASE+19, BOX_TEXT_BASE+5, BOX_FILL_4, BOX_FILL_4, BOX_FILL_4, BOX_FILL_4
 
 
 ; ============================================================================
@@ -1250,7 +1331,7 @@ _fmenu_start_save_as:
     cpx #SRAM_NAME_LEN
     bne @clr_name
 
-    ; Draw filename entry dialog on BG3 (rows 4-7)
+    ; Draw filename entry dialog on BG1 (rows 4-7)
     lda #$8F
     sta INIDISP.w
     lda #$80
@@ -1259,85 +1340,122 @@ _fmenu_start_save_as:
     rep #$10
     .INDEX 16
 
-    ; Top border (row 4)
+    ; Top border (row 4): TL corner + 14× h-edge + TR corner
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (4 * 32) + 8
+    lda #VRAM_BG1_MAP + (4 * 32) + 8
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    lda #KBD_TILE_HLINE
-    ldy #16
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    lda #BOX_HEDGE_4
+    ldy #14
 @sas_top:
     sta VMDATAL.w
     pha
-    lda #$30
+    lda #BOX_PAL
     sta VMDATAH.w
     pla
     dey
     bne @sas_top
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (TR corner)
+    sta VMDATAH.w
 
-    ; Row 5: "  ENTER NAME  " (16 chars)
+    ; Row 5: L edge + " ENTER NAME   " + R edge
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (5 * 32) + 8
+    lda #VRAM_BG1_MAP + (5 * 32) + 8
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 5                ; E
-    _write_tile 14               ; N
-    _write_tile 20               ; T
-    _write_tile 5                ; E
-    _write_tile 18               ; R
-    _write_tile 0                ; space
-    _write_tile 14               ; N
-    _write_tile 1                ; A
-    _write_tile 13               ; M
-    _write_tile 5                ; E
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_TEXT_BASE+14          ; N
+    _write_box_tile BOX_TEXT_BASE+20          ; T
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_TEXT_BASE+18          ; R
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+14          ; N
+    _write_box_tile BOX_TEXT_BASE+1           ; A
+    _write_box_tile BOX_TEXT_BASE+13          ; M
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
 
-    ; Row 6: filename display area (blank initially)
+    ; Row 6: L edge + " " + 12 blank name tiles + " " + R edge
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (6 * 32) + 8
+    lda #VRAM_BG1_MAP + (6 * 32) + 8
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    ; 12 blank tiles for name
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    lda #BOX_FILL_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    ; 12 blank tiles for name (fill background with box highlight palette)
+    lda #BOX_FILL_4
     ldy #12
 @sas_blank:
-    stz VMDATAL.w
-    lda #$34                     ; Highlight text palette (PPP=5)
+    sta VMDATAL.w
+    pha
+    lda #BOX_PAL_HL              ; PPP=4 (box highlight) on BG1
     sta VMDATAH.w
+    pla
     dey
     bne @sas_blank
-    _write_tile 0                ; space
-    _write_tile 0                ; space
+    lda #BOX_FILL_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
 
-    ; Bottom border (row 7)
+    ; Bottom border (row 7): BL corner + 14× h-edge + BR corner
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (7 * 32) + 8
+    lda #VRAM_BG1_MAP + (7 * 32) + 8
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    lda #KBD_TILE_HLINE
-    ldy #16
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $80           ; V-flip (BL corner)
+    sta VMDATAH.w
+    lda #BOX_HEDGE_4
+    ldy #14
 @sas_bot:
     sta VMDATAL.w
     pha
-    lda #$30
+    lda #BOX_PAL | $80           ; V-flip (bottom edge)
     sta VMDATAH.w
     pla
     dey
     bne @sas_bot
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $C0           ; HV-flip (BR corner)
+    sta VMDATAH.w
 
     lda SHADOW_INIDISP.w
     sta INIDISP.w
@@ -1439,7 +1557,7 @@ _dialog_update_name:
 
 
 ; ============================================================================
-; _dialog_redraw_name — Redraw filename on BG3 row 6
+; _dialog_redraw_name — Redraw filename on BG1 row 6
 ; Assumes: 8-bit A/X/Y
 ; ============================================================================
 _dialog_redraw_name:
@@ -1453,7 +1571,7 @@ _dialog_redraw_name:
 
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (6 * 32) + 10   ; Row 6, col 10 (after 2 spaces)
+    lda #VRAM_BG1_MAP + (6 * 32) + 10   ; Row 6, col 10 (after 2 spaces)
     sta VMADDL.w
     sep #$20
     .ACCU 8
@@ -1466,10 +1584,15 @@ _dialog_redraw_name:
     cpx save_name_len.w
     bcs @rn_pad
     lda save_name_buf.w,X
-    ; Convert to keyboard tile index
-    jsr _ascii_to_kbd_tile
+    ; Convert ASCII to opaque box tile index via ascii_to_tile table
+    sec
+    sbc #$20
+    tay
+    lda ascii_to_tile.w,Y
+    clc
+    adc #BOX_TEXT_BASE
     sta VMDATAL.w
-    lda #$34                     ; Highlight text palette (PPP=5)
+    lda #BOX_PAL_HL              ; PPP=4 (box highlight) on BG1
     sta VMDATAH.w
     inx
     bra @rn_loop
@@ -1477,16 +1600,17 @@ _dialog_redraw_name:
     ; Show cursor at current position, blank after
     cpx save_name_len.w
     bne @rn_blank
-    ; Cursor position — show underscore
-    lda #KBD_TILE_USCORE
+    ; Cursor position — show opaque underscore
+    lda #BOX_TEXT_BASE + 44      ; Opaque underscore tile
     sta VMDATAL.w
-    lda #$34
+    lda #BOX_PAL_HL              ; PPP=4 (box highlight) on BG1
     sta VMDATAH.w
     inx
     bra @rn_loop
 @rn_blank:
-    stz VMDATAL.w
-    lda #$34
+    lda #BOX_FILL_4
+    sta VMDATAL.w
+    lda #BOX_PAL_HL              ; PPP=4 (box highlight) on BG1
     sta VMDATAH.w
     inx
     bra @rn_loop
@@ -1559,7 +1683,7 @@ _ascii_to_kbd_tile:
 
 
 ; ============================================================================
-; _dialog_clear_area — Clear dialog area on BG3 (rows 4-7)
+; _dialog_clear_area — Clear dialog area on BG1 (rows 4-7) + set dirty
 ; Assumes: 8-bit A/X/Y
 ; ============================================================================
 _dialog_clear_area:
@@ -1591,7 +1715,7 @@ _dialog_clear_area:
     asl A
     asl A                        ; × 32
     clc
-    adc #VRAM_BG3_MAP + 8
+    adc #VRAM_BG1_MAP + 8
     sta VMADDL.w
     sep #$20
     .ACCU 8
@@ -1613,11 +1737,21 @@ _dialog_clear_area:
 
     sep #$10
     .INDEX 8
+
+    ; Set dirty flag to re-render editor content
+    lda file_type.w
+    bne @dc_sheet
+    lda #$01
+    sta doc_dirty.w
+    rts
+@dc_sheet:
+    lda #$01
+    sta sheet_dirty.w
     rts
 
 
 ; ============================================================================
-; _dialog_show_dirty — Show "SAVE CHANGES?" dialog on BG3
+; _dialog_show_dirty — Show "SAVE CHANGES?" dialog on BG1
 ; Options: YES / NO / CANCEL
 ; Assumes: 8-bit A/X/Y
 ; ============================================================================
@@ -1638,112 +1772,150 @@ _dialog_show_dirty:
     rep #$10
     .INDEX 16
 
-    ; Top border (row 5)
+    ; Top border (row 5): TL corner + 18× h-edge + TR corner
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (5 * 32) + 6
+    lda #VRAM_BG1_MAP + (5 * 32) + 6
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    lda #KBD_TILE_HLINE
-    ldy #20
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    lda #BOX_HEDGE_4
+    ldy #18
 @dd_top:
     sta VMDATAL.w
     pha
-    lda #$30
+    lda #BOX_PAL
     sta VMDATAH.w
     pla
     dey
     bne @dd_top
-
-    ; Row 6: "  SAVE CHANGES?   "
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG3_MAP + (6 * 32) + 6
-    sta VMADDL.w
-    sep #$20
-    .ACCU 8
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 19               ; S
-    _write_tile 1                ; A
-    _write_tile 22               ; V
-    _write_tile 5                ; E
-    _write_tile 0                ; space
-    _write_tile 3                ; C
-    _write_tile 8                ; H
-    _write_tile 1                ; A
-    _write_tile 14               ; N
-    _write_tile 7                ; G
-    _write_tile 5                ; E
-    _write_tile 19               ; S
-    _write_tile 47               ; ? (KBD_TILE_QUEST)
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-
-    ; Row 7: blank
-    rep #$20
-    .ACCU 16
-    lda #VRAM_BG3_MAP + (7 * 32) + 6
-    sta VMADDL.w
-    sep #$20
-    .ACCU 8
-    ldy #20
-@dd_r7:
-    stz VMDATAL.w
-    lda #$30
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (TR corner)
     sta VMDATAH.w
+
+    ; Row 6: L edge + " SAVE CHANGES?   " + R edge
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (6 * 32) + 6
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+19          ; S
+    _write_box_tile BOX_TEXT_BASE+1           ; A
+    _write_box_tile BOX_TEXT_BASE+22          ; V
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+3           ; C
+    _write_box_tile BOX_TEXT_BASE+8           ; H
+    _write_box_tile BOX_TEXT_BASE+1           ; A
+    _write_box_tile BOX_TEXT_BASE+14          ; N
+    _write_box_tile BOX_TEXT_BASE+7           ; G
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_TEXT_BASE+19          ; S
+    _write_box_tile BOX_TEXT_BASE+47          ; ?
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
+
+    ; Row 7: spacer (L edge + 18× fill + R edge)
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (7 * 32) + 6
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    lda #BOX_FILL_4
+    ldy #18
+@dd_r7:
+    sta VMDATAL.w
+    pha
+    lda #BOX_PAL
+    sta VMDATAH.w
+    pla
     dey
     bne @dd_r7
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
 
-    ; Row 8: " YES   NO  CANCEL "
+    ; Row 8: L edge + "YES   NO  CANCEL" + R edge
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (8 * 32) + 6
+    lda #VRAM_BG1_MAP + (8 * 32) + 6
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    _write_tile 0                ; space
-    _write_tile 25               ; Y
-    _write_tile 5                ; E
-    _write_tile 19               ; S
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 14               ; N
-    _write_tile 15               ; O
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 0                ; space
-    _write_tile 3                ; C
-    _write_tile 1                ; A
-    _write_tile 14               ; N
-    _write_tile 3                ; C
-    _write_tile 5                ; E
-    _write_tile 12               ; L
-    _write_tile 0                ; space
-    _write_tile 0                ; space
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+25          ; Y
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_TEXT_BASE+19          ; S
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+14          ; N
+    _write_box_tile BOX_TEXT_BASE+15          ; O
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_FILL_4                ; space
+    _write_box_tile BOX_TEXT_BASE+3           ; C
+    _write_box_tile BOX_TEXT_BASE+1           ; A
+    _write_box_tile BOX_TEXT_BASE+14          ; N
+    _write_box_tile BOX_TEXT_BASE+3           ; C
+    _write_box_tile BOX_TEXT_BASE+5           ; E
+    _write_box_tile BOX_TEXT_BASE+12          ; L
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
+    sta VMDATAH.w
 
-    ; Bottom border (row 9)
+    ; Bottom border (row 9): BL corner + 18× h-edge + BR corner
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (9 * 32) + 6
+    lda #VRAM_BG1_MAP + (9 * 32) + 6
     sta VMADDL.w
     sep #$20
     .ACCU 8
-    lda #KBD_TILE_HLINE
-    ldy #20
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $80           ; V-flip (BL corner)
+    sta VMDATAH.w
+    lda #BOX_HEDGE_4
+    ldy #18
 @dd_bot:
     sta VMDATAL.w
     pha
-    lda #$30
+    lda #BOX_PAL | $80           ; V-flip (bottom edge)
     sta VMDATAH.w
     pla
     dey
     bne @dd_bot
+    lda #BOX_CORNER_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $C0           ; HV-flip (BR corner)
+    sta VMDATAH.w
 
     lda SHADOW_INIDISP.w
     sta INIDISP.w
@@ -1884,116 +2056,132 @@ _dialog_update_dirty_hl:
     rep #$10
     .INDEX 16
 
-    ; Rewrite row 8 with highlights
+    ; Rewrite row 8 with highlights: L edge + content + R edge
     rep #$20
     .ACCU 16
-    lda #VRAM_BG3_MAP + (8 * 32) + 6
+    lda #VRAM_BG1_MAP + (8 * 32) + 6
     sta VMADDL.w
     sep #$20
     .ACCU 8
 
+    ; Left edge
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL
+    sta VMDATAH.w
+
     ; YES (3 chars at offset 1-3)
     lda dialog_sel.w
     beq @dhl_yes_hl
-    lda #$30                     ; Normal (PPP=4)
+    lda #BOX_PAL                 ; Normal (PPP=3)
     bra @dhl_yes_pal
 @dhl_yes_hl:
-    lda #$34                     ; Highlight (PPP=5)
+    lda #BOX_PAL_HL              ; Highlight (PPP=4)
 @dhl_yes_pal:
     sta $06
 
     ; Write " YES   "
-    stz VMDATAL.w                ; space
-    lda #$30
-    sta VMDATAH.w
-    lda #25                      ; Y
+    lda #BOX_FILL_4
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    lda #5                       ; E
+    lda #BOX_TEXT_BASE+25        ; Y
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    lda #19                      ; S
+    lda #BOX_TEXT_BASE+5         ; E
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    stz VMDATAL.w                ; space
-    lda #$30
+    lda #BOX_TEXT_BASE+19        ; S
+    sta VMDATAL.w
+    lda $06
     sta VMDATAH.w
-    stz VMDATAL.w                ; space
-    lda #$30
+    lda #BOX_FILL_4
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+    lda #BOX_FILL_4
+    sta VMDATAL.w
+    lda $06
     sta VMDATAH.w
 
     ; NO (2 chars at offset 7-8)
     lda dialog_sel.w
     cmp #1
     beq @dhl_no_hl
-    lda #$30
+    lda #BOX_PAL                 ; Normal (PPP=3)
     bra @dhl_no_pal
 @dhl_no_hl:
-    lda #$34
+    lda #BOX_PAL_HL              ; Highlight (PPP=4)
 @dhl_no_pal:
     sta $06
 
-    stz VMDATAL.w                ; space
-    lda #$30
-    sta VMDATAH.w
-    lda #14                      ; N
+    lda #BOX_FILL_4
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    lda #15                      ; O
+    lda #BOX_TEXT_BASE+14        ; N
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    stz VMDATAL.w                ; space
-    lda #$30
+    lda #BOX_TEXT_BASE+15        ; O
+    sta VMDATAL.w
+    lda $06
     sta VMDATAH.w
-    stz VMDATAL.w                ; space
-    lda #$30
+    lda #BOX_FILL_4
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+    lda #BOX_FILL_4
+    sta VMDATAL.w
+    lda $06
     sta VMDATAH.w
 
     ; CANCEL (6 chars at offset 12-17)
     lda dialog_sel.w
     cmp #2
     beq @dhl_can_hl
-    lda #$30
+    lda #BOX_PAL                 ; Normal (PPP=3)
     bra @dhl_can_pal
 @dhl_can_hl:
-    lda #$34
+    lda #BOX_PAL_HL              ; Highlight (PPP=4)
 @dhl_can_pal:
     sta $06
 
-    stz VMDATAL.w                ; space
-    lda #$30
-    sta VMDATAH.w
-    lda #3                       ; C
+    lda #BOX_FILL_4
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    lda #1                       ; A
+    lda #BOX_TEXT_BASE+3         ; C
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    lda #14                      ; N
+    lda #BOX_TEXT_BASE+1         ; A
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    lda #3                       ; C
+    lda #BOX_TEXT_BASE+14        ; N
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    lda #5                       ; E
+    lda #BOX_TEXT_BASE+3         ; C
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    lda #12                      ; L
+    lda #BOX_TEXT_BASE+5         ; E
     sta VMDATAL.w
     lda $06
     sta VMDATAH.w
-    stz VMDATAL.w                ; space
-    lda #$30
+    lda #BOX_TEXT_BASE+12        ; L
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+
+    ; Right edge
+    lda #BOX_VEDGE_4
+    sta VMDATAL.w
+    lda #BOX_PAL | $40           ; H-flip (right edge)
     sta VMDATAH.w
 
     lda SHADOW_INIDISP.w
@@ -2005,7 +2193,7 @@ _dialog_update_dirty_hl:
 
 
 ; ============================================================================
-; _dialog_clear_dirty — Clear dirty dialog area on BG3 (rows 5-9)
+; _dialog_clear_dirty — Clear dirty dialog area on BG1 (rows 5-9) + set dirty
 ; Assumes: 8-bit A/X/Y
 ; ============================================================================
 _dialog_clear_dirty:
@@ -2037,7 +2225,7 @@ _dialog_clear_dirty:
     asl A
     asl A                        ; × 32
     clc
-    adc #VRAM_BG3_MAP + 6
+    adc #VRAM_BG1_MAP + 6
     sta VMADDL.w
     sep #$20
     .ACCU 8
@@ -2059,4 +2247,14 @@ _dialog_clear_dirty:
 
     sep #$10
     .INDEX 8
+
+    ; Set dirty flag to re-render editor content
+    lda file_type.w
+    bne @cdd_sheet
+    lda #$01
+    sta doc_dirty.w
+    rts
+@cdd_sheet:
+    lda #$01
+    sta sheet_dirty.w
     rts

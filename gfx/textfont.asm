@@ -207,30 +207,161 @@ MAKE_4BPP_TILE $18,$3E,$60,$3C,$06,$7C,$18,$00
 ; --- Tile 60: Text cursor (solid underscore) ---
 MAKE_4BPP_TILE $00,$00,$00,$00,$00,$00,$FF,$00
 
+; ============================================================================
+; Box Frame Tiles — 4bpp opaque tiles for file menu/dialog overlays on BG1
+; Background pixels = color 1 (solid fill), text/border = color 3.
+; No transparent pixels, so underlying layers don't bleed through.
+; ============================================================================
+
+; Macro: 4bpp tile with solid background (color 1) and pattern in color 3
+.MACRO MAKE_4BPP_BOX_TILE ARGS r0, r1, r2, r3, r4, r5, r6, r7
+    .db $FF, r0, $FF, r1, $FF, r2, $FF, r3
+    .db $FF, r4, $FF, r5, $FF, r6, $FF, r7
+    .db $00,$00, $00,$00, $00,$00, $00,$00
+    .db $00,$00, $00,$00, $00,$00, $00,$00
+.ENDM
+
+; --- Tile 61: Box fill (solid color 1) ---
+MAKE_4BPP_BOX_TILE $00,$00,$00,$00,$00,$00,$00,$00
+
+; --- Tile 62: Box corner TL (2px top + 2px left border in color 3) ---
+MAKE_4BPP_BOX_TILE $FF,$FF,$C0,$C0,$C0,$C0,$C0,$C0
+
+; --- Tile 63: Box horizontal edge (2px top border) ---
+MAKE_4BPP_BOX_TILE $FF,$FF,$00,$00,$00,$00,$00,$00
+
+; --- Tile 64: Box vertical edge (2px left border) ---
+MAKE_4BPP_BOX_TILE $C0,$C0,$C0,$C0,$C0,$C0,$C0,$C0
+
+; ============================================================================
+; Opaque Font Tiles (tiles 65-125) — same glyphs as tiles 0-60 but with
+; solid background. Index = original tile + BOX_TEXT_BASE (65).
+; ============================================================================
+
+; --- Tile 65: Blank (solid fill) ---
+MAKE_4BPP_BOX_TILE $00,$00,$00,$00,$00,$00,$00,$00
+; --- Tile 66: A ---
+MAKE_4BPP_BOX_TILE $3C,$66,$66,$7E,$66,$66,$00,$00
+; --- Tile 67: B ---
+MAKE_4BPP_BOX_TILE $7C,$66,$7C,$66,$66,$7C,$00,$00
+; --- Tile 68: C ---
+MAKE_4BPP_BOX_TILE $3C,$66,$60,$60,$66,$3C,$00,$00
+; --- Tile 69: D ---
+MAKE_4BPP_BOX_TILE $78,$6C,$66,$66,$6C,$78,$00,$00
+; --- Tile 70: E ---
+MAKE_4BPP_BOX_TILE $7E,$60,$7C,$60,$60,$7E,$00,$00
+; --- Tile 71: F ---
+MAKE_4BPP_BOX_TILE $7E,$60,$7C,$60,$60,$60,$00,$00
+; --- Tile 72: G ---
+MAKE_4BPP_BOX_TILE $3C,$66,$60,$6E,$66,$3C,$00,$00
+; --- Tile 73: H ---
+MAKE_4BPP_BOX_TILE $66,$66,$7E,$66,$66,$66,$00,$00
+; --- Tile 74: I ---
+MAKE_4BPP_BOX_TILE $3C,$18,$18,$18,$18,$3C,$00,$00
+; --- Tile 75: J ---
+MAKE_4BPP_BOX_TILE $1E,$06,$06,$06,$66,$3C,$00,$00
+; --- Tile 76: K ---
+MAKE_4BPP_BOX_TILE $66,$6C,$78,$78,$6C,$66,$00,$00
+; --- Tile 77: L ---
+MAKE_4BPP_BOX_TILE $60,$60,$60,$60,$60,$7E,$00,$00
+; --- Tile 78: M ---
+MAKE_4BPP_BOX_TILE $66,$7E,$7E,$5A,$66,$66,$00,$00
+; --- Tile 79: N ---
+MAKE_4BPP_BOX_TILE $66,$76,$7E,$6E,$66,$66,$00,$00
+; --- Tile 80: O ---
+MAKE_4BPP_BOX_TILE $3C,$66,$66,$66,$66,$3C,$00,$00
+; --- Tile 81: P ---
+MAKE_4BPP_BOX_TILE $7C,$66,$66,$7C,$60,$60,$00,$00
+; --- Tile 82: Q ---
+MAKE_4BPP_BOX_TILE $3C,$66,$66,$66,$6E,$3C,$06,$00
+; --- Tile 83: R ---
+MAKE_4BPP_BOX_TILE $7C,$66,$66,$7C,$6C,$66,$00,$00
+; --- Tile 84: S ---
+MAKE_4BPP_BOX_TILE $3C,$66,$38,$06,$66,$3C,$00,$00
+; --- Tile 85: T ---
+MAKE_4BPP_BOX_TILE $7E,$18,$18,$18,$18,$18,$00,$00
+; --- Tile 86: U ---
+MAKE_4BPP_BOX_TILE $66,$66,$66,$66,$66,$3C,$00,$00
+; --- Tile 87: V ---
+MAKE_4BPP_BOX_TILE $66,$66,$66,$66,$3C,$18,$00,$00
+; --- Tile 88: W ---
+MAKE_4BPP_BOX_TILE $66,$66,$66,$5A,$7E,$66,$00,$00
+; --- Tile 89: X ---
+MAKE_4BPP_BOX_TILE $66,$3C,$18,$18,$3C,$66,$00,$00
+; --- Tile 90: Y ---
+MAKE_4BPP_BOX_TILE $66,$66,$3C,$18,$18,$18,$00,$00
+; --- Tile 91: Z ---
+MAKE_4BPP_BOX_TILE $7E,$06,$0C,$18,$30,$7E,$00,$00
+; --- Tile 92: 0 ---
+MAKE_4BPP_BOX_TILE $3C,$66,$6E,$76,$66,$3C,$00,$00
+; --- Tile 93: 1 ---
+MAKE_4BPP_BOX_TILE $18,$38,$18,$18,$18,$7E,$00,$00
+; --- Tile 94: 2 ---
+MAKE_4BPP_BOX_TILE $3C,$66,$06,$1C,$30,$7E,$00,$00
+; --- Tile 95: 3 ---
+MAKE_4BPP_BOX_TILE $3C,$66,$0C,$06,$66,$3C,$00,$00
+; --- Tile 96: 4 ---
+MAKE_4BPP_BOX_TILE $0C,$1C,$3C,$6C,$7E,$0C,$00,$00
+; --- Tile 97: 5 ---
+MAKE_4BPP_BOX_TILE $7E,$60,$7C,$06,$66,$3C,$00,$00
+; --- Tile 98: 6 ---
+MAKE_4BPP_BOX_TILE $3C,$60,$7C,$66,$66,$3C,$00,$00
+; --- Tile 99: 7 ---
+MAKE_4BPP_BOX_TILE $7E,$06,$0C,$18,$18,$18,$00,$00
+; --- Tile 100: 8 ---
+MAKE_4BPP_BOX_TILE $3C,$66,$3C,$66,$66,$3C,$00,$00
+; --- Tile 101: 9 ---
+MAKE_4BPP_BOX_TILE $3C,$66,$3E,$06,$06,$3C,$00,$00
+; --- Tile 102: ← (backspace) ---
+MAKE_4BPP_BOX_TILE $00,$10,$30,$7E,$30,$10,$00,$00
+; --- Tile 103: ↵ (enter) ---
+MAKE_4BPP_BOX_TILE $00,$04,$04,$24,$3C,$20,$00,$00
+; --- Tile 104: ^ (caret) ---
+MAKE_4BPP_BOX_TILE $18,$3C,$66,$00,$7E,$00,$00,$00
+; --- Tile 105: X mark (delete) ---
+MAKE_4BPP_BOX_TILE $00,$66,$3C,$18,$3C,$66,$00,$00
+; --- Tile 106: / ---
+MAKE_4BPP_BOX_TILE $00,$06,$0C,$18,$30,$60,$00,$00
+; --- Tile 107: , (comma) ---
+MAKE_4BPP_BOX_TILE $00,$00,$00,$00,$18,$18,$30,$00
+; --- Tile 108: . (period) ---
+MAKE_4BPP_BOX_TILE $00,$00,$00,$00,$00,$18,$18,$00
+; --- Tile 109: _ (underscore) ---
+MAKE_4BPP_BOX_TILE $00,$00,$00,$00,$00,$00,$7E,$00
+; --- Tile 110: ─ (horizontal line) ---
+MAKE_4BPP_BOX_TILE $00,$00,$00,$FF,$00,$00,$00,$00
+; --- Tile 111: ! ---
+MAKE_4BPP_BOX_TILE $18,$18,$18,$18,$00,$18,$00,$00
+; --- Tile 112: ? ---
+MAKE_4BPP_BOX_TILE $3C,$66,$06,$1C,$00,$18,$00,$00
+; --- Tile 113: - (minus) ---
+MAKE_4BPP_BOX_TILE $00,$00,$00,$7E,$00,$00,$00,$00
+; --- Tile 114: + ---
+MAKE_4BPP_BOX_TILE $00,$18,$18,$7E,$18,$18,$00,$00
+; --- Tile 115: = ---
+MAKE_4BPP_BOX_TILE $00,$00,$7E,$00,$7E,$00,$00,$00
+; --- Tile 116: ; ---
+MAKE_4BPP_BOX_TILE $00,$18,$18,$00,$18,$18,$30,$00
+; --- Tile 117: : ---
+MAKE_4BPP_BOX_TILE $00,$18,$18,$00,$18,$18,$00,$00
+; --- Tile 118: ( ---
+MAKE_4BPP_BOX_TILE $0C,$18,$30,$30,$18,$0C,$00,$00
+; --- Tile 119: ) ---
+MAKE_4BPP_BOX_TILE $30,$18,$0C,$0C,$18,$30,$00,$00
+; --- Tile 120: " ---
+MAKE_4BPP_BOX_TILE $66,$66,$44,$00,$00,$00,$00,$00
+; --- Tile 121: ' ---
+MAKE_4BPP_BOX_TILE $18,$18,$08,$00,$00,$00,$00,$00
+; --- Tile 122: @ ---
+MAKE_4BPP_BOX_TILE $3C,$66,$6E,$6E,$60,$3C,$00,$00
+; --- Tile 123: # ---
+MAKE_4BPP_BOX_TILE $24,$7E,$24,$7E,$24,$00,$00,$00
+; --- Tile 124: $ ---
+MAKE_4BPP_BOX_TILE $18,$3E,$60,$3C,$06,$7C,$18,$00
+; --- Tile 125: Text cursor (opaque solid underscore) ---
+MAKE_4BPP_BOX_TILE $00,$00,$00,$00,$00,$00,$FF,$00
+
 textfont_tiles_end:
-
-
-; ============================================================================
-; ASCII-to-Tile Lookup Table
-; 96 entries for ASCII 32 ($20) through 127 ($7F).
-; Maps each ASCII code to the corresponding keyboard font tile index.
-; Characters without a tile glyph map to 0 (blank).
-; Lowercase letters (97-122) map to same tiles as uppercase (1-26).
-; ============================================================================
-
-ascii_to_tile:
-;       sp   !    "    #    $    %    &    '    (    )    *    +    ,    -    .    /
-.db      0, 46,  55,  58,  59,   0,   0,  56,  53,  54,   0,  49,  42,  48,  43,  41
-;        0    1    2    3    4    5    6    7    8    9    :    ;    <    =    >    ?
-.db     27,  28,  29,  30,  31,  32,  33,  34,  35,  36,  52,  51,   0,  50,   0,  47
-;        @    A    B    C    D    E    F    G    H    I    J    K    L    M    N    O
-.db     57,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15
-;        P    Q    R    S    T    U    V    W    X    Y    Z    [    \    ]    ^    _
-.db     16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,   0,   0,   0,   0,  44
-;        `    a    b    c    d    e    f    g    h    i    j    k    l    m    n    o
-.db      0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15
-;        p    q    r    s    t    u    v    w    x    y    z    {    |    }    ~   DEL
-.db     16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,   0,   0,   0,   0,   0
 
 
 ; ============================================================================
@@ -301,6 +432,32 @@ sheet_pal_headers:
 .dw $0000    ; 14: unused
 .dw $0000    ; 15: unused
 sheet_pal_headers_end:
+
+; ============================================================================
+; Box Overlay Palettes — BG1 sub-palettes 3 and 4 for file menu/dialog
+; Sub-palette 3 (CGRAM 48-63): Normal box — white text on dark gray fill
+; Sub-palette 4 (CGRAM 64-79): Highlight box — yellow text on dark gray fill
+; ============================================================================
+
+box_palette:
+.dw $0000    ; 0: transparent
+.dw $1084    ; 1: dark gray (box fill background)
+.dw $1084    ; 2: dark gray (same as fill)
+.dw $7FFF    ; 3: white (text / border color)
+.dw $0000, $0000, $0000, $0000   ; 4-7: unused
+.dw $0000, $0000, $0000, $0000   ; 8-11: unused
+.dw $0000, $0000, $0000, $0000   ; 12-15: unused
+box_palette_end:
+
+box_pal_highlight:
+.dw $0000    ; 0: transparent
+.dw $1084    ; 1: dark gray (box fill background)
+.dw $1084    ; 2: dark gray (same as fill)
+.dw $03FF    ; 3: yellow (highlighted text / border)
+.dw $0000, $0000, $0000, $0000   ; 4-7: unused
+.dw $0000, $0000, $0000, $0000   ; 8-11: unused
+.dw $0000, $0000, $0000, $0000   ; 12-15: unused
+box_pal_highlight_end:
 
 ; ============================================================================
 ; Grid Border Tiles — 4bpp tiles for BG2 cell grid overlay

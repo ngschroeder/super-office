@@ -343,6 +343,13 @@ _type_sel_build_map:
         sta VMDATAH.w
     .ENDM
 
+    .MACRO _write_box_tile ARGS _tile
+        lda #_tile
+        sta VMDATAL.w
+        lda #BOX_PAL                 ; PPP=3 (box normal) on BG1
+        sta VMDATAH.w
+    .ENDM
+
     .MACRO _write_tile_bg1 ARGS _tile
         lda #_tile
         sta VMDATAL.w

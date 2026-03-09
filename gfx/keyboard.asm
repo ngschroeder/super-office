@@ -240,24 +240,24 @@ MAKE_KEY_TILE $00,$18,$18,$7E,$18,$18
 ; Spacebar uses continuous background (no inter-key gaps) with
 ; transparent top/bottom rows. Three edge types + letter overlays.
 
-; --- Tile 87: Spacebar left cap ---
-; bp0: $7F = 01111111 (left px transparent, rest filled)
-.db $00,$00, $7F,$00, $7F,$00, $7F,$00
-.db $7F,$00, $7F,$00, $7F,$00, $00,$00
+; --- Tile 87: Box fill (all pixels = color 1, solid background) ---
+.db $FF,$00, $FF,$00, $FF,$00, $FF,$00
+.db $FF,$00, $FF,$00, $FF,$00, $FF,$00
 
-; --- Tile 88: Spacebar middle (blank) ---
-; bp0: $FF = all filled (connects to adjacent spacebar tiles)
-.db $00,$00, $FF,$00, $FF,$00, $FF,$00
-.db $FF,$00, $FF,$00, $FF,$00, $00,$00
+; --- Tile 88: Box corner TL (top 2px + left 2px = color 3 border, rest color 1 fill) ---
+; Use H/V flip in tilemap for TR, BL, BR corners
+.db $FF,$FF, $FF,$FF, $FF,$C0, $FF,$C0
+.db $FF,$C0, $FF,$C0, $FF,$C0, $FF,$C0
 
-; --- Tile 89: Spacebar right cap ---
-; bp0: $FE = 11111110 (right px transparent, rest filled)
-.db $00,$00, $FE,$00, $FE,$00, $FE,$00
-.db $FE,$00, $FE,$00, $FE,$00, $00,$00
+; --- Tile 89: Box horizontal edge (top 2px = color 3 border, rest color 1 fill) ---
+; Use V-flip in tilemap for bottom edge
+.db $FF,$FF, $FF,$FF, $FF,$00, $FF,$00
+.db $FF,$00, $FF,$00, $FF,$00, $FF,$00
 
-; --- Tile 90: Spacebar "S" ---
-.db $00,$00, $FF,$3C, $FF,$66, $FF,$38
-.db $FF,$06, $FF,$66, $FF,$3C, $00,$00
+; --- Tile 90: Box vertical edge (left 2px = color 3 border, rest color 1 fill) ---
+; Use H-flip in tilemap for right edge
+.db $FF,$C0, $FF,$C0, $FF,$C0, $FF,$C0
+.db $FF,$C0, $FF,$C0, $FF,$C0, $FF,$C0
 
 ; --- Tile 91: Spacebar "P" ---
 .db $00,$00, $FF,$7C, $FF,$66, $FF,$66
@@ -586,6 +586,18 @@ kbd_palette:
 .dw $0000    ; 21: transparent (hides key background)
 .dw $0000    ; 22: transparent (hides shadow)
 .dw $03FF    ; 23: yellow (highlighted text)
+
+; Sub-palette 6: box — white text/border on dark fill (CGRAM 24-27)
+.dw $0000    ; 24: transparent
+.dw $1084    ; 25: dark gray (box fill background)
+.dw $1084    ; 26: dark gray (shadow → same as fill)
+.dw $7FFF    ; 27: white (text + border color)
+
+; Sub-palette 7: box highlighted — yellow text on dark fill (CGRAM 28-31)
+.dw $0000    ; 28: transparent
+.dw $1084    ; 29: dark gray (box fill background)
+.dw $1084    ; 30: dark gray (shadow → same as fill)
+.dw $03FF    ; 31: yellow (highlighted text + border)
 kbd_palette_end:
 
 

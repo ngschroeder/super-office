@@ -408,6 +408,39 @@ spreadsheet_init:
     lda #$01
     sta MDMAEN.w
 
+    ; === Upload box overlay palettes (for file menu/dialogs on BG1) ===
+    ; Box normal palette → CGRAM 48-63 (sub-palette 3)
+    lda #48
+    sta CGADD.w
+    lda #:box_palette
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #box_palette
+    sta A1T0L.w
+    lda #box_palette_end - box_palette
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; Box highlight palette → CGRAM 64-79 (sub-palette 4)
+    lda #64
+    sta CGADD.w
+    lda #:box_pal_highlight
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #box_pal_highlight
+    sta A1T0L.w
+    lda #box_pal_highlight_end - box_pal_highlight
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
     ; === Re-set backdrop to dark blue ===
     stz CGADD.w
     lda #$00
