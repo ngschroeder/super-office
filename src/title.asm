@@ -210,6 +210,8 @@ state_title:
     ; Transition to next state based on menu selection
     lda title_menu_sel.w
     beq @goto_type_sel           ; 0 = CREATE NEW → type selection
+    cmp #$02
+    beq @goto_options            ; 2 = OPTIONS → options screen
     ; 1 = OPEN FILE → file browser
     jsr file_brw_init
     lda #STATE_FILE_BRW
@@ -220,6 +222,12 @@ state_title:
     stz menu_choice.w            ; Record that we came from "CREATE NEW"
     jsr type_sel_init
     lda #STATE_TYPE_SEL
+    sta current_state.w
+    rts
+
+@goto_options:
+    jsr options_init
+    lda #STATE_OPTIONS
     sta current_state.w
     rts
 
@@ -284,24 +292,42 @@ _title_check_menu_hover:
 
 @check_menu1:
     ; --- Check menu item 1: "OPEN FILE" ---
-    ; WLA-DX width restore: branches here come from 16-bit A mode
-    ; (the preceding sep #$20 is only reached on the menu 0 hit path)
     .ACCU 16
     lda cursor_x.w
     cmp #MENU1_X1
-    bcc @no_hover
+    bcc @check_menu2
     cmp #MENU1_X2+1
-    bcs @no_hover
+    bcs @check_menu2
     lda cursor_y.w
     cmp #MENU1_Y1
-    bcc @no_hover
+    bcc @check_menu2
     cmp #MENU1_Y2+1
-    bcs @no_hover
+    bcs @check_menu2
     ; Hit!
     sep #$20
     .ACCU 8
     lda #$01
     sta title_menu_sel.w         ; 1 = OPEN FILE
+    rts
+
+@check_menu2:
+    ; --- Check menu item 2: "OPTIONS" ---
+    .ACCU 16
+    lda cursor_x.w
+    cmp #MENU2_X1
+    bcc @no_hover
+    cmp #MENU2_X2+1
+    bcs @no_hover
+    lda cursor_y.w
+    cmp #MENU2_Y1
+    bcc @no_hover
+    cmp #MENU2_Y2+1
+    bcs @no_hover
+    ; Hit!
+    sep #$20
+    .ACCU 8
+    lda #$02
+    sta title_menu_sel.w         ; 2 = OPTIONS
     rts
 
 @no_hover:
@@ -336,6 +362,8 @@ _title_update_menu_arrow:
 
     cmp #$01
     beq @old_row26
+    cmp #$02
+    beq @old_row28
     ; Old was row 24 (CREATE NEW)
     rep #$20
     .ACCU 16
@@ -345,6 +373,11 @@ _title_update_menu_arrow:
     rep #$20
     .ACCU 16
     lda #VRAM_BG1_MAP + (26 * 32) + 10
+    bra @write_old
+@old_row28:
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (28 * 32) + 10
 @write_old:
     sta vram_wq_data.w,X
     sep #$20
@@ -371,6 +404,8 @@ _title_update_menu_arrow:
 
     cmp #$01
     beq @new_row26
+    cmp #$02
+    beq @new_row28
     ; New is row 24 (CREATE NEW)
     rep #$20
     .ACCU 16
@@ -380,6 +415,11 @@ _title_update_menu_arrow:
     rep #$20
     .ACCU 16
     lda #VRAM_BG1_MAP + (26 * 32) + 10
+    bra @write_new
+@new_row28:
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (28 * 32) + 10
 @write_new:
     sta vram_wq_data.w,X
     sep #$20
@@ -462,6 +502,20 @@ _title_build_bg1_map:
     lda #title_text_row26
     sta A1T0L.w
     lda #title_text_row26_end - title_text_row26
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; Row 28: "OPTIONS"
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (28 * 32) + TITLE_ROW28_COL
+    sta VMADDL.w
+    lda #title_text_row28
+    sta A1T0L.w
+    lda #title_text_row28_end - title_text_row28
     sta DAS0L.w
     sep #$20
     .ACCU 8

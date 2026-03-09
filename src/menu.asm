@@ -1375,3 +1375,535 @@ _fb_update_del_hl:
     sep #$10
     .INDEX 8
     rts
+
+
+; ============================================================================
+; OPTIONS SCREEN
+; ============================================================================
+
+; ============================================================================
+; options_init — Set up the options screen
+; Reuses same pattern as type_sel_init (BG3 + sprites, dark blue background)
+; Assumes: 8-bit A/X/Y
+; ============================================================================
+options_init:
+    .ACCU 8
+    .INDEX 8
+
+    ; === Force blank ===
+    lda #$8F
+    sta INIDISP.w
+
+    ; === Disable HDMA ===
+    stz SHADOW_HDMAEN.w
+    stz HDMAEN.w
+
+    ; === Clear OAM ===
+    jsr clear_oam
+
+    ; === Upload keyboard 2bpp tiles to BG3 chr ===
+    lda #$80
+    sta VMAIN.w
+    lda #$01
+    sta DMAP0.w
+    lda #$18
+    sta BBAD0.w
+    lda #:kbd_tiles
+    sta A1B0.w
+
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG3_CHR
+    sta VMADDL.w
+    lda #kbd_tiles
+    sta A1T0L.w
+    lda #kbd_tiles_end - kbd_tiles
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; === Upload keyboard palette ===
+    stz CGADD.w
+    lda #$00
+    sta DMAP0.w
+    lda #$22
+    sta BBAD0.w
+    lda #:kbd_palette
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #kbd_palette
+    sta A1T0L.w
+    lda #kbd_palette_end - kbd_palette
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; === Backdrop color: dark blue ===
+    stz CGADD.w
+    lda #$00
+    sta CGDATA.w
+    lda #$28
+    sta CGDATA.w
+
+    ; === Build BG3 tilemap ===
+    jsr _options_build_map
+
+    ; === PPU: BG3 + sprites ===
+    lda #%00010100               ; OBJ + BG3
+    sta SHADOW_TM.w
+    sta TM.w
+
+    lda #$09                     ; Mode 1 + BG3 priority
+    sta SHADOW_BGMODE.w
+    sta BGMODE.w
+
+    stz SHADOW_CGWSEL.w
+    stz CGWSEL.w
+    stz SHADOW_CGADSUB.w
+    stz CGADSUB.w
+
+    ; === Initialize selection state ===
+    lda #$FF
+    sta opt_sel.w
+    sta opt_prev_sel.w
+
+    ; === Fade in ===
+    lda #FADE_IN
+    sta fade_dir.w
+    stz fade_level.w
+    stz SHADOW_INIDISP.w
+    stz INIDISP.w
+
+    rts
+
+
+; ============================================================================
+; _options_build_map — Build BG3 tilemap for options screen
+; Shows "OPTIONS" header, MUSIC ON/OFF toggle, VOLUME 1-5 selector
+; Must be called during force blank.
+; Assumes: 8-bit A/X/Y
+; ============================================================================
+_options_build_map:
+    .ACCU 8
+    .INDEX 8
+
+    lda #$80
+    sta VMAIN.w
+
+    ; Zero entire BG3 tilemap
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG3_MAP
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+    stz $00
+    lda #$09
+    sta DMAP0.w
+    lda #$18
+    sta BBAD0.w
+    stz A1T0L.w
+    stz A1T0H.w
+    stz A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #2048
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; --- "OPTIONS" at row 4, col 12 ---
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG3_MAP + (4 * 32) + 12
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+
+    _write_tile 15               ; O
+    _write_tile 16               ; P
+    _write_tile 20               ; T
+    _write_tile 9                ; I
+    _write_tile 15               ; O
+    _write_tile 14               ; N
+    _write_tile 19               ; S
+
+    ; --- "MUSIC" label at row 9, col 6 ---
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG3_MAP + (9 * 32) + 6
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+
+    _write_tile 13               ; M
+    _write_tile 21               ; U
+    _write_tile 19               ; S
+    _write_tile 9                ; I
+    _write_tile 3                ; C
+
+    ; --- "ON" and "OFF" at row 9, col 14 and col 18 ---
+    ; Render with highlight based on current opt_music_on
+    jsr _options_render_music_toggle
+
+    ; --- "VOLUME" label at row 13, col 6 ---
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG3_MAP + (13 * 32) + 6
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+
+    _write_tile 22               ; V
+    _write_tile 15               ; O
+    _write_tile 12               ; L
+    _write_tile 21               ; U
+    _write_tile 13               ; M
+    _write_tile 5                ; E
+
+    ; --- Volume level indicators "1 2 3 4 5" at row 13, col 14 ---
+    jsr _options_render_volume
+
+    rts
+
+
+; ============================================================================
+; _options_render_music_toggle — Write ON/OFF with highlight at row 9
+; Assumes: 8-bit A/X/Y, force blank active
+; ============================================================================
+_options_render_music_toggle:
+    .ACCU 8
+    .INDEX 8
+
+    lda #$80
+    sta VMAIN.w
+
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG3_MAP + (9 * 32) + 14
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+
+    ; ON palette: highlighted if music is on
+    lda opt_music_on.w
+    bne @on_hl
+    lda #$30                     ; Normal
+    bra @on_set
+@on_hl:
+    lda #$34                     ; Highlight (PPP=5, yellow)
+@on_set:
+    sta $06
+
+    lda #15                      ; O
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+    lda #14                      ; N
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+
+    ; Two spaces
+    stz VMDATAL.w
+    lda #$30
+    sta VMDATAH.w
+    stz VMDATAL.w
+    lda #$30
+    sta VMDATAH.w
+
+    ; OFF palette: highlighted if music is off
+    lda opt_music_on.w
+    bne @off_norm
+    lda #$34                     ; Highlight
+    bra @off_set
+@off_norm:
+    lda #$30                     ; Normal
+@off_set:
+    sta $06
+
+    lda #15                      ; O
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+    lda #6                       ; F
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+    lda #6                       ; F
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+
+    rts
+
+
+; ============================================================================
+; _options_render_volume — Write volume level "1 2 3 4 5" at row 13
+; Active level and below are highlighted (yellow), above are normal (white).
+; Assumes: 8-bit A/X/Y, force blank active
+; ============================================================================
+_options_render_volume:
+    .ACCU 8
+    .INDEX 8
+
+    lda #$80
+    sta VMAIN.w
+
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG3_MAP + (13 * 32) + 14
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+
+    ; Write digits 1-5, each separated by a space
+    ldx #1                       ; Current digit
+@vol_digit:
+    cpx #6
+    bcs @vol_done
+
+    ; Tile = digit tile index (53 + digit)
+    txa
+    clc
+    adc #53
+    sta $07                      ; Save tile
+
+    ; Palette: highlight if digit <= opt_volume
+    txa
+    cmp opt_volume.w
+    beq @vol_hl
+    bcc @vol_hl
+    ; Above current level: normal
+    lda #$30
+    bra @vol_pal_set
+@vol_hl:
+    lda #$34                     ; Yellow highlight
+@vol_pal_set:
+    sta $06
+
+    lda $07                      ; Tile
+    sta VMDATAL.w
+    lda $06
+    sta VMDATAH.w
+
+    ; Space between digits (except after last)
+    cpx #5
+    bcs @vol_no_space
+    stz VMDATAL.w
+    lda #$30
+    sta VMDATAH.w
+@vol_no_space:
+
+    inx
+    bra @vol_digit
+@vol_done:
+    rts
+
+
+; ============================================================================
+; state_options — Per-frame update for options screen
+; Assumes: 8-bit A/X/Y
+; ============================================================================
+state_options:
+    .ACCU 8
+    .INDEX 8
+
+    jsr read_input
+
+    ; Handle fade
+    lda fade_dir.w
+    beq @opt_no_fade
+
+    cmp #FADE_IN
+    bne @opt_fade_out
+
+    lda fade_level.w
+    cmp #$0F
+    bcs @opt_fade_in_done
+    inc A
+    sta fade_level.w
+    sta SHADOW_INIDISP.w
+    rts
+
+@opt_fade_in_done:
+    stz fade_dir.w
+    bra @opt_no_fade
+
+@opt_fade_out:
+    lda fade_level.w
+    beq @opt_fade_out_done
+    dec A
+    sta fade_level.w
+    sta SHADOW_INIDISP.w
+    rts
+
+@opt_fade_out_done:
+    stz fade_dir.w
+    ; Return to title via boot
+    lda #STATE_BOOT
+    sta current_state.w
+    rts
+
+@opt_no_fade:
+    ; --- Check hover on MUSIC ON/OFF ---
+    jsr _options_check_hover
+
+    ; --- Check for click ---
+    lda click_new.w
+    beq @opt_check_rclick
+
+    lda opt_sel.w
+    cmp #$FF
+    beq @opt_check_rclick
+
+    ; Something was clicked
+    cmp #$00
+    bne @opt_click_vol
+
+    ; --- Music toggle clicked ---
+    lda opt_music_on.w
+    eor #$01                     ; Toggle
+    sta opt_music_on.w
+    bne @opt_music_turned_on
+
+    ; Music turned OFF
+    jsr stop_music
+    bra @opt_music_redraw
+
+@opt_music_turned_on:
+    ; Music turned ON — play title music
+    lda #SONG_TITLE
+    jsr play_music
+
+@opt_music_redraw:
+    lda #SFX_MENU_SEL
+    jsr play_sfx
+    ; Redraw ON/OFF labels
+    lda #$8F
+    sta INIDISP.w
+    jsr _options_render_music_toggle
+    lda SHADOW_INIDISP.w
+    sta INIDISP.w
+    rts
+
+@opt_click_vol:
+    ; opt_sel = 1-5 = volume level clicked
+    sta opt_volume.w
+    jsr apply_volume
+    lda #SFX_MENU_SEL
+    jsr play_sfx
+    ; Redraw volume bar
+    lda #$8F
+    sta INIDISP.w
+    jsr _options_render_volume
+    lda SHADOW_INIDISP.w
+    sta INIDISP.w
+    rts
+
+@opt_check_rclick:
+    ; Right-click = go back to title
+    lda rclick_new.w
+    beq @opt_done
+
+    lda #SFX_MENU_SEL
+    jsr play_sfx
+    lda #FADE_OUT
+    sta fade_dir.w
+
+@opt_done:
+    rts
+
+
+; ============================================================================
+; _options_check_hover — Check cursor position against options items
+; Sets opt_sel: $FF=none, 0=music toggle area, 1-5=volume level
+; Assumes: 8-bit A/X/Y
+; ============================================================================
+_options_check_hover:
+    .ACCU 8
+    .INDEX 8
+
+    rep #$20
+    .ACCU 16
+
+    ; --- Check MUSIC row (row 9, Y 72-79) ---
+    lda cursor_y.w
+    cmp #72
+    bcc @opt_no_sel
+    cmp #80
+    bcs @opt_check_vol
+
+    ; Check ON area (cols 14-15, X 112-127)
+    lda cursor_x.w
+    cmp #112
+    bcc @opt_no_sel
+    cmp #128
+    bcc @opt_sel_music
+
+    ; Check OFF area (cols 18-20, X 144-167)
+    cmp #144
+    bcc @opt_no_sel
+    cmp #168
+    bcc @opt_sel_music
+    bra @opt_no_sel
+
+@opt_sel_music:
+    sep #$20
+    .ACCU 8
+    stz opt_sel.w                ; 0 = music toggle
+    rts
+
+@opt_check_vol:
+    ; --- Check VOLUME row (row 13, Y 104-111) ---
+    .ACCU 16
+    lda cursor_y.w
+    cmp #104
+    bcc @opt_no_sel
+    cmp #112
+    bcs @opt_no_sel
+
+    ; Volume digits at col 14, 16, 18, 20, 22 (each digit + space = 2 cols)
+    ; Digit 1: X 112-119 (col 14)
+    ; Digit 2: X 128-135 (col 16)
+    ; Digit 3: X 144-151 (col 18)
+    ; Digit 4: X 160-167 (col 20)
+    ; Digit 5: X 176-183 (col 22)
+    lda cursor_x.w
+    cmp #112
+    bcc @opt_no_sel
+    cmp #184
+    bcs @opt_no_sel
+
+    ; Compute which digit: (cursor_x - 112) / 16 + 1
+    sec
+    sbc #112
+    sep #$20
+    .ACCU 8
+    lsr A
+    lsr A
+    lsr A
+    lsr A                        ; / 16
+    inc A                        ; 1-based
+    cmp #6
+    bcs @opt_no_sel_8            ; Shouldn't happen but safety check
+    ; Check if we're on the digit (even columns) or the space (odd columns)
+    ; Digit at col offset 0, space at offset 1 within each 2-col cell
+    ; Actually, just accept the full 16px width for easier clicking
+    sta opt_sel.w
+    rts
+
+@opt_no_sel:
+    sep #$20
+    .ACCU 8
+@opt_no_sel_8:
+    lda #$FF
+    sta opt_sel.w
+    rts

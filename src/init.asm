@@ -248,8 +248,18 @@ init_reset:
     ; === Initialize SRAM (check/format on first boot) ===
     jsr sram_init
 
+    ; === Initialize options defaults ===
+    lda #$01
+    sta opt_music_on.w           ; Music on by default
+    lda #$03
+    sta opt_volume.w             ; Volume level 3 (60%) by default
+
     ; === Initialize audio engine (upload SPC700 driver + data) ===
     jsr audio_init
+
+    ; Set initial volume from opt_volume (level 3 = 60%)
+    lda opt_volume.w
+    jsr apply_volume
 
     ; === Initialize save system variables ===
     lda #$FF

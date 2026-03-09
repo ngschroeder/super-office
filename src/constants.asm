@@ -26,6 +26,7 @@
 .define STATE_TEXTDOC   4        ; Text document editor (Phase 4)
 .define STATE_SHEET     5        ; Spreadsheet editor (Phase 5)
 .define STATE_FMENU     6        ; File menu overlay (Phase 6)
+.define STATE_OPTIONS   7        ; Options screen
 
 ; --- Fade system ---
 .define FADE_NONE       0
@@ -128,6 +129,11 @@
 .define MENU1_X2        167
 .define MENU1_Y1        196
 .define MENU1_Y2        211
+; "OPTIONS" at tile row 28, scrolled up 12px → visual Y 212
+.define MENU2_X1        88
+.define MENU2_X2        167
+.define MENU2_Y1        212
+.define MENU2_Y2        219
 
 ; --- Large title font tile indices (16x16, 4 tiles each: TL,TR,BL,BR) ---
 .define BIG_S           1        ; tiles 1-4
@@ -304,7 +310,12 @@
 .define vram_wq_data    $B9      ; Write queue: 10 entries × 4 bytes ($B9-$E0)
                                  ; Each entry: addr_lo, addr_hi, tile, attr
 .define bg1_scroll_y    $E1      ; BG1 vertical scroll offset (default $FE)
-                                 ; $E2+ used by audio system (see audio.asm)
+                                 ; $E2 used by audio system (see audio.asm)
+; --- Options screen variables (DP $E3-$E6) ---
+.define opt_music_on    $E3      ; 0=music off, 1=music on (default 1)
+.define opt_volume      $E4      ; Volume level 1-5 (default 3 = 60%)
+.define opt_sel         $E5      ; Hovered item ($FF=none, 0=music, 1-5=vol level)
+.define opt_prev_sel    $E6      ; Previous hover (for redraw)
 
 ; --- Tilemap palette bits (shifted for tilemap entry high byte) ---
 ; Tilemap entry: VHOPPPcc cccccccc  (PPP = palette 0-7)

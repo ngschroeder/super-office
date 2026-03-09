@@ -238,7 +238,7 @@ _audio_send_cmd:
     rts
 
 ; ============================================================================
-; play_music — Start background music
+; play_music — Start background music (respects opt_music_on)
 ;
 ; Entry: A = song ID (SONG_TITLE, SONG_EDITOR, etc.)
 ;        8-bit A, 8-bit X/Y
@@ -248,6 +248,14 @@ play_music:
     .ACCU 8
     .INDEX 8
 
+    ; Check if music is enabled
+    pha
+    lda opt_music_on.w
+    bne @music_ok
+    pla
+    rts                              ; Music disabled, skip
+@music_ok:
+    pla
     tax                              ; Parameter = song ID
     lda #CMD_PLAY_MUSIC              ; Command byte
     jsr _audio_send_cmd
@@ -285,7 +293,7 @@ play_sfx:
     rts
 
 ; ============================================================================
-; set_volume — Set master volume
+; set_volume — Set master volume (raw 0-127)
 ;
 ; Entry: A = volume level (0-127, where 0=silent, 127=max)
 ;        8-bit A, 8-bit X/Y
@@ -299,3 +307,23 @@ set_volume:
     lda #CMD_SET_VOLUME              ; Command byte
     jsr _audio_send_cmd
     rts
+
+; ============================================================================
+; apply_volume — Set volume from opt_volume level (1-5)
+;
+; Entry: A = volume level 1-5
+;        8-bit A, 8-bit X/Y
+; Exit:  8-bit A, 8-bit X/Y
+; ============================================================================
+apply_volume:
+    .ACCU 8
+    .INDEX 8
+
+    tax
+    lda _vol_table-1.w,X             ; Level 1-5 → raw volume
+    jsr set_volume
+    rts
+
+; Volume lookup: level 1=20%, 2=40%, 3=60%, 4=80%, 5=100%
+_vol_table:
+    .db 25, 51, 76, 102, 127

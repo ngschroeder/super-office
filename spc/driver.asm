@@ -106,14 +106,14 @@ spc_driver_start:
 .db $E4, $F4                       ; $0283: MOV A, $F4  ; read CPUIO0
 .db $64, $02                       ; $0285: CMP A, $02  ; vs last_cmd_id
 .db $F0, $F3                       ; $0287: BEQ _main_loop
-; --- New command ---
-.db $C4, $02                       ; $0289: MOV $02, A  ; last_cmd_id
-.db $E4, $F5                       ; $028B: MOV A, $F5  ; param
-.db $C4, $01                       ; $028D: MOV $01, A  ; cmd_param
-.db $E4, $02                       ; $028F: MOV A, $02
-.db $C4, $F6                       ; $0291: MOV $F6, A  ; ack
-.db $E4, $F4                       ; $0293: MOV A, $F4
-.db $C4, $00                       ; $0295: MOV $00, A  ; cmd_byte
+; --- New command (port 0=counter, port 1=cmd, port 2=param) ---
+.db $C4, $02                       ; $0289: MOV $02, A  ; last_cmd_id = counter
+.db $C4, $F6                       ; $028B: MOV $F6, A  ; ack via port 2 out
+.db $E4, $F6                       ; $028D: MOV A, $F6  ; read port 2 in = param
+.db $C4, $01                       ; $028F: MOV $01, A  ; cmd_param
+.db $E4, $F5                       ; $0291: MOV A, $F5  ; read port 1 = cmd byte
+.db $C4, $00                       ; $0293: MOV $00, A  ; cmd_byte
+.db $00, $00                       ; $0295: NOP; NOP     ; pad (same size)
 ; --- Dispatch ---
 .db $F0, $34                       ; $0297: BEQ _done  ; NOP
 .db $68, $01                       ; $0299: CMP A, #$01  ; play_music

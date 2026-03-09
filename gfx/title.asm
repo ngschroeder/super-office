@@ -285,3 +285,17 @@ title_text_row26:
 title_text_row26_end:
 .define TITLE_ROW26_COL 10
 .define TITLE_ROW26_LEN 10
+
+; Row 28: "OPTIONS" small font, starting at col 10
+title_text_row28:
+.db TILE_BLANK, PAL7_HI   ; arrow placeholder
+.db TILE_O, PAL7_HI
+.db TILE_P, PAL7_HI
+.db TILE_T, PAL7_HI
+.db TILE_I, PAL7_HI
+.db TILE_O, PAL7_HI
+.db TILE_N, PAL7_HI
+.db TILE_S, PAL7_HI
+title_text_row28_end:
+.define TITLE_ROW28_COL 10
+.define TITLE_ROW28_LEN 8

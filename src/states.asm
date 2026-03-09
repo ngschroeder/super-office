@@ -28,6 +28,7 @@ _state_table:
     .dw state_textdoc            ; 4: text doc editor (Phase 4)
     .dw state_sheet              ; 5: spreadsheet editor
     .dw state_fmenu              ; 6: file menu overlay (Phase 6)
+    .dw state_options            ; 7: options screen
 
 ; ============================================================================
 ; state_boot — One-shot: initialize title screen, then switch to STATE_TITLE
