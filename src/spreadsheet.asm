@@ -6,8 +6,8 @@
 ;
 ; Layout:
 ;   Row 0:     Status bar ("SHEET")
-;   Row 1:     Column headers (A-H)
-;   Rows 2-19: Data rows (18 visible rows × 8 columns × 3 chars)
+;   Row 1:     Column headers (A-E)
+;   Rows 2-19: Data rows (9 visible rows × 2 tiles tall × 5 columns × 5 chars)
 ;   Rows 20+:  On-screen keyboard (managed by keyboard.asm)
 ;
 ; Cell buffer at WRAM $0500, 2048 bytes total.
@@ -183,6 +183,133 @@ spreadsheet_init:
     lda #$01
     sta MDMAEN.w
 
+    ; === Upload grid tiles to BG2 chr (VRAM $2000) ===
+    lda #$80
+    sta VMAIN.w
+    lda #$01                     ; DMA mode 1 (two regs: VMDATAL/H)
+    sta DMAP0.w
+    lda #$18
+    sta BBAD0.w
+    lda #:sheet_grid_tiles
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG2_CHR
+    sta VMADDL.w
+    lda #sheet_grid_tiles
+    sta A1T0L.w
+    lda #sheet_grid_tiles_end - sheet_grid_tiles
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; === Build BG2 grid tilemap (1px cell borders, 2-row-tall cells) ===
+    lda #$80
+    sta VMAIN.w
+    stz $02                      ; $02 = data row counter (0 to 8)
+
+@grid_row:
+    lda $02
+    cmp #SHEET_VISIBLE_ROWS
+    bcc @grid_cont
+    jmp @grid_done
+@grid_cont:
+
+    ; Compute top tilemap row = SHEET_DATA_START + data_row * 2
+    lda $02
+    asl A                        ; × 2
+    clc
+    adc #SHEET_DATA_START
+    sta $03                      ; $03 = top tilemap row
+
+    ; --- Top row: horizontal + vertical borders ---
+    lda $03
+    sta $06
+    stz $07
+    rep #$20
+    .ACCU 16
+    lda $06
+    asl A
+    asl A
+    asl A
+    asl A
+    asl A                        ; × 32
+    clc
+    adc #VRAM_BG2_MAP + SHEET_DATA_COL
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+
+    ldx #5
+@grid_cell_top:
+    lda #1                       ; Corner: top + left border
+    sta VMDATAL.w
+    stz VMDATAH.w
+    lda #2                       ; Top border only
+    sta VMDATAL.w
+    stz VMDATAH.w
+    lda #2
+    sta VMDATAL.w
+    stz VMDATAH.w
+    lda #2
+    sta VMDATAL.w
+    stz VMDATAH.w
+    lda #2
+    sta VMDATAL.w
+    stz VMDATAH.w
+    dex
+    bne @grid_cell_top
+
+    lda #3                       ; Right edge
+    sta VMDATAL.w
+    stz VMDATAH.w
+
+    ; --- Bottom row: vertical borders only ---
+    lda $03
+    inc A                        ; bottom tilemap row
+    sta $06
+    stz $07
+    rep #$20
+    .ACCU 16
+    lda $06
+    asl A
+    asl A
+    asl A
+    asl A
+    asl A                        ; × 32
+    clc
+    adc #VRAM_BG2_MAP + SHEET_DATA_COL
+    sta VMADDL.w
+    sep #$20
+    .ACCU 8
+
+    ldx #5
+@grid_cell_bot:
+    lda #3                       ; Left border only
+    sta VMDATAL.w
+    stz VMDATAH.w
+    stz VMDATAL.w                ; Blank
+    stz VMDATAH.w
+    stz VMDATAL.w
+    stz VMDATAH.w
+    stz VMDATAL.w
+    stz VMDATAH.w
+    stz VMDATAL.w
+    stz VMDATAH.w
+    dex
+    bne @grid_cell_bot
+
+    lda #3                       ; Right edge
+    sta VMDATAL.w
+    stz VMDATAH.w
+
+    inc $02
+    jmp @grid_row
+
+@grid_done:
+
     ; === Clear cell buffer (skip if loaded from SRAM) ===
     lda current_slot.w
     cmp #$FF
@@ -219,12 +346,74 @@ spreadsheet_init:
     sta SHADOW_BGMODE.w
     sta BGMODE.w
 
-    lda #%00010001               ; OBJ + BG1
+    lda #%00010011               ; OBJ + BG2 + BG1
     sta SHADOW_TM.w
     sta TM.w
 
     ; === Show on-screen keyboard (adds BG3 to TM) ===
     jsr kbd_show
+
+    ; === Re-upload spreadsheet palettes (kbd_show overwrites CGRAM 0-23) ===
+    ; kbd_palette has 6 sub-palettes (48 bytes), clobbering our highlight palette
+    ; at CGRAM 16+. Re-upload all 3 BG1 palettes to fix.
+
+    ; Font palette → CGRAM 0-15
+    stz CGADD.w
+    lda #$00
+    sta DMAP0.w
+    lda #$22
+    sta BBAD0.w
+    lda #:textfont_palette
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #textfont_palette
+    sta A1T0L.w
+    lda #textfont_palette_end - textfont_palette
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; Highlight palette → CGRAM 16-31
+    lda #16
+    sta CGADD.w
+    lda #:sheet_pal_highlight
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #sheet_pal_highlight
+    sta A1T0L.w
+    lda #sheet_pal_highlight_end - sheet_pal_highlight
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; Header palette → CGRAM 32-47
+    lda #32
+    sta CGADD.w
+    lda #:sheet_pal_headers
+    sta A1B0.w
+    rep #$20
+    .ACCU 16
+    lda #sheet_pal_headers
+    sta A1T0L.w
+    lda #sheet_pal_headers_end - sheet_pal_headers
+    sta DAS0L.w
+    sep #$20
+    .ACCU 8
+    lda #$01
+    sta MDMAEN.w
+
+    ; === Re-set backdrop to dark blue ===
+    stz CGADD.w
+    lda #$00
+    sta CGDATA.w
+    lda #$28
+    sta CGDATA.w
 
     ; === Mark initialized ===
     lda #$01
@@ -705,7 +894,7 @@ _sheet_render_status:
 
 
 ; ============================================================================
-; _sheet_render_headers — Write column headers A-H on row 1 (gray palette)
+; _sheet_render_headers — Write column headers A-E on row 1 (gray palette)
 ; Must be called during force blank.
 ; Assumes: 8-bit A, 16-bit X/Y, VMAIN=$80
 ; ============================================================================
@@ -728,12 +917,12 @@ _sheet_render_headers:
     dey
     bne @clear_hdr
 
-    ; Write column letter at: SHEET_DATA_COL + col * SHEET_COL_WIDTH + 1
-    ; Col 0 (A): tile col 3 + 0*3 + 1 = 4
-    ; Col 1 (B): tile col 3 + 1*3 + 1 = 7
-    ; Col 2 (C): tile col 3 + 2*3 + 1 = 10
+    ; Write column letter at: SHEET_DATA_COL + col * SHEET_COL_WIDTH + 2
+    ; Col 0 (A): tile col 3 + 0*5 + 2 = 5
+    ; Col 1 (B): tile col 3 + 1*5 + 2 = 10
+    ; Col 2 (C): tile col 3 + 2*5 + 2 = 15
     ; etc.
-    stz $02                      ; $02 = column counter (0-7)
+    stz $02                      ; $02 = column counter (0-4)
 
 @hdr_col:
     lda $02
@@ -741,15 +930,16 @@ _sheet_render_headers:
     bcs @hdr_done
 
     ; Compute tilemap position: row 1 offset + tile col
-    ; tile col = SHEET_DATA_COL + col * SHEET_COL_WIDTH + 1
+    ; tile col = SHEET_DATA_COL + col * SHEET_COL_WIDTH + 2
     lda $02
-    ; Multiply by 3 (col * SHEET_COL_WIDTH)
+    ; Multiply by 5 (col * SHEET_COL_WIDTH)
     sta $04
     asl A
+    asl A
     clc
-    adc $04                      ; A = col * 3
+    adc $04                      ; A = col * 5
     clc
-    adc #SHEET_DATA_COL + 1      ; + data start + 1 (center in 3-wide cell)
+    adc #SHEET_DATA_COL + 2      ; + data start + 2 (center in 5-wide cell)
     sta $04
     stz $05                      ; $04-$05 = tile column (16-bit)
 
@@ -762,7 +952,7 @@ _sheet_render_headers:
     sep #$20
     .ACCU 8
 
-    ; Write letter tile: A=1, B=2, ..., H=8
+    ; Write letter tile: A=1, B=2, ..., E=5
     lda $02
     inc A                        ; col 0→1 (A), col 1→2 (B), ...
     sta VMDATAL.w
@@ -777,7 +967,7 @@ _sheet_render_headers:
 
 
 ; ============================================================================
-; _sheet_render_rows — Render visible data rows (tilemap rows 2-19)
+; _sheet_render_rows — Render visible data rows (2 tilemap rows per data row)
 ; Must be called during force blank.
 ; Assumes: 8-bit A, 16-bit X/Y, VMAIN=$80
 ; ============================================================================
@@ -785,7 +975,7 @@ _sheet_render_rows:
     .ACCU 8
     .INDEX 16
 
-    stz $02                      ; $02 = screen row counter (0-17)
+    stz $02                      ; $02 = screen row counter (0-8)
 
 @row_loop:
     lda $02
@@ -800,8 +990,10 @@ _sheet_render_rows:
     adc $02
     sta $03                      ; $03 = data row
 
-    ; Compute VRAM address = VRAM_BG1_MAP + (screen_row + SHEET_DATA_START) * 32
+    ; Compute VRAM address for TOP tilemap row
+    ; tilemap_row = SHEET_DATA_START + screen_row * 2
     lda $02
+    asl A                        ; × 2 (SHEET_ROW_HEIGHT)
     clc
     adc #SHEET_DATA_START
     sta $06
@@ -820,13 +1012,23 @@ _sheet_render_rows:
     sep #$20
     .ACCU 8
 
-    ; Check if data_row >= SHEET_ROWS → render blank row
+    ; Check if data_row >= SHEET_ROWS → render blank double row
     lda $03
     cmp #SHEET_ROWS
     bcc @row_valid
     jmp @row_blank
 
 @row_valid:
+    ; --- Write blank top row (32 tiles, vertical padding) ---
+    ldy #32
+@top_pad:
+    stz VMDATAL.w
+    lda #$20                     ; PPP=0, priority=1
+    sta VMDATAH.w
+    dey
+    bne @top_pad
+
+    ; --- VRAM pointer now at content row (auto-advanced) ---
     ; --- Write row number (1-based, right-aligned in 2 cols) ---
     lda $03
     inc A                        ; 1-based row number
@@ -875,8 +1077,8 @@ _sheet_render_rows:
     lda #$28                     ; Gray palette
     sta VMDATAH.w
 
-    ; --- Write cell data for columns 0-7 ---
-    stz $0C                      ; $0C = column counter (0-7)
+    ; --- Write cell data for columns 0-4 ---
+    stz $0C                      ; $0C = column counter (0-4)
 
 @col_loop:
     lda $0C
@@ -917,21 +1119,11 @@ _sheet_render_rows:
     sep #$20
     .ACCU 8
 
-    ; Determine palette: $24 for active cell, $20 for normal
-    lda $03                      ; data_row
-    cmp sheet_cursor_row.w
-    bne @col_normal
-    lda $0C
-    cmp sheet_cursor_col.w
-    bne @col_normal
-    lda #$24                     ; Highlight palette (PPP=1)
-    bra @col_pal_set
-@col_normal:
-    lda #$20                     ; Normal palette (PPP=0)
-@col_pal_set:
+    ; All cells use PPP=0 (white text), priority=1
+    lda #$20
     sta $0D                      ; $0D = palette high byte
 
-    ; Write up to 3 chars from cell content
+    ; Write up to 5 chars from cell content
     ldy #$0000                   ; Y = char counter within cell
 
 @cell_char:
@@ -962,9 +1154,9 @@ _sheet_render_rows:
     bra @col_loop
 
 @row_next:
-    ; Fill remaining tile cols (27-31) with blanks
-    ; 8 cols × 3 tiles = 24 data tiles + 3 prefix = 27 tiles used, 5 remain
-    ldy #5
+    ; Fill remaining tile cols (28-31) with blanks
+    ; 5 cols × 5 tiles = 25 data tiles + 3 prefix = 28 tiles used, 4 remain
+    ldy #4
 @row_pad:
     stz VMDATAL.w
     lda #$20
@@ -976,8 +1168,8 @@ _sheet_render_rows:
     jmp @row_loop
 
 @row_blank:
-    ; Blank entire row (32 tiles)
-    ldy #32
+    ; Blank double row (64 tiles = 2 tilemap rows)
+    ldy #64
 @blank_tile:
     stz VMDATAL.w
     lda #$20
@@ -1009,9 +1201,10 @@ _sheet_render_cursor:
     cmp #SHEET_VISIBLE_ROWS
     bcs @rc_off                  ; Below visible area
 
-    ; Compute tilemap row = screen_row + SHEET_DATA_START
+    ; Compute tilemap row = SHEET_DATA_START + screen_row * 2 + 1 (content row)
+    asl A                        ; screen_row * 2
     clc
-    adc #SHEET_DATA_START
+    adc #SHEET_DATA_START + 1    ; +1 = content row of 2-row cell
     sta $06
     stz $07
 
@@ -1027,8 +1220,9 @@ _sheet_render_cursor:
     lda sheet_cursor_col.w
     sta $04
     asl A
+    asl A
     clc
-    adc $04                      ; A = cursor_col * 3
+    adc $04                      ; A = cursor_col * 5
     clc
     adc #SHEET_DATA_COL
     clc
@@ -1059,7 +1253,7 @@ _sheet_render_cursor:
 
     lda #SHEET_CURSOR_TILE
     sta VMDATAL.w
-    lda #$24                     ; Highlight palette
+    lda #$20                     ; White text palette (PPP=0)
     sta VMDATAH.w
 
 @rc_off:
@@ -1075,7 +1269,7 @@ _sheet_check_click:
     .INDEX 8
 
     ; Check Y bounds: pixel Y must be in data area
-    ; Top = SHEET_DATA_START * 8 = 16, Bottom = (SHEET_DATA_START + SHEET_VISIBLE_ROWS) * 8 = 160
+    ; Top = SHEET_DATA_START * 8 = 16, Bottom = (SHEET_DATA_START + SHEET_VISIBLE_ROWS * SHEET_ROW_HEIGHT) * 8 = 160
     rep #$20
     .ACCU 16
     lda cursor_y.w
@@ -1087,7 +1281,7 @@ _sheet_check_click:
     rep #$20
     .ACCU 16
     lda cursor_y.w
-    cmp #(SHEET_DATA_START + SHEET_VISIBLE_ROWS) * 8
+    cmp #(SHEET_DATA_START + SHEET_VISIBLE_ROWS * SHEET_ROW_HEIGHT) * 8
     sep #$20
     .ACCU 8
     bcs @click_miss              ; Below data area
@@ -1110,7 +1304,7 @@ _sheet_check_click:
     .ACCU 8
     bcs @click_miss
 
-    ; Compute screen row = (cursor_y - 16) / 8
+    ; Compute screen row = (cursor_y - 16) / 16 (cells are 16px tall)
     rep #$20
     .ACCU 16
     lda cursor_y.w
@@ -1118,7 +1312,8 @@ _sheet_check_click:
     sbc #SHEET_DATA_START * 8    ; - 16
     sep #$20
     .ACCU 8
-    ; A = low byte (0-143), divide by 8
+    ; A = low byte (0-143), divide by 16
+    lsr A
     lsr A
     lsr A
     lsr A                        ; screen_row
@@ -1129,7 +1324,7 @@ _sheet_check_click:
     bcs @click_miss
     sta sheet_cursor_row.w
 
-    ; Compute column = (cursor_x - 24) / 8 / 3
+    ; Compute column = (cursor_x - 24) / 8 / 5
     rep #$20
     .ACCU 16
     lda cursor_x.w
@@ -1140,18 +1335,18 @@ _sheet_check_click:
     ; A = low byte, divide by 8
     lsr A
     lsr A
-    lsr A                        ; tile_col (0-23)
-    ; Divide tile_col by 3 to get column
+    lsr A                        ; tile_col (0-24)
+    ; Divide tile_col by 5 to get column
     ; Use subtraction loop
     ldx #$00
-@div3:
-    cmp #3
-    bcc @div3_done
+@div5:
+    cmp #5
+    bcc @div5_done
     sec
-    sbc #3
+    sbc #5
     inx
-    bra @div3
-@div3_done:
+    bra @div5
+@div5_done:
     cpx #SHEET_COLS
     bcs @click_miss              ; Column out of range
     stx sheet_cursor_col.w
@@ -1245,9 +1440,10 @@ _sheet_blink_write:
     jmp @sbw_done                ; Off screen (below)
 +
 
-    ; Compute tilemap row = screen_row + SHEET_DATA_START
+    ; Compute tilemap row = SHEET_DATA_START + screen_row * 2 + 1 (content row)
+    asl A                        ; screen_row * 2
     clc
-    adc #SHEET_DATA_START
+    adc #SHEET_DATA_START + 1    ; +1 = content row of 2-row cell
     sta $06
     stz $07
 
@@ -1261,8 +1457,9 @@ _sheet_blink_write:
     lda sheet_cursor_col.w
     sta $04
     asl A
+    asl A
     clc
-    adc $04                      ; A = col * 3
+    adc $04                      ; A = col * 5
     clc
     adc #SHEET_DATA_COL
     clc
@@ -1339,7 +1536,7 @@ _sheet_blink_write:
     .ACCU 8
     lda $0C                      ; tile
     sta vram_wq_data+2.w,X
-    lda #$24                     ; attr (highlight palette)
+    lda #$20                     ; attr (white text, PPP=0)
     sta vram_wq_data+3.w,X
     inc vram_wq_count.w
 

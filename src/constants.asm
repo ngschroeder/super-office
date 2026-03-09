@@ -260,18 +260,19 @@
 
 ; --- Spreadsheet editor constants ---
 .define SHEET_BUF_ADDR    $0500   ; Cell buffer start (shares doc buffer space)
-.define SHEET_COLS        8       ; Columns A-H
+.define SHEET_COLS        5       ; Columns A-E
 .define SHEET_ROWS        32      ; Total data rows
 .define SHEET_CELL_SIZE   8       ; Bytes per cell (null-padded content)
-.define SHEET_ROW_BYTES   64      ; SHEET_COLS * SHEET_CELL_SIZE
-.define SHEET_VISIBLE_ROWS 18     ; Visible data rows (tilemap rows 2-19)
-.define SHEET_DISP_CHARS  3       ; Display chars per cell on screen
+.define SHEET_ROW_BYTES   64      ; 8 logical cols * SHEET_CELL_SIZE (buffer stride)
+.define SHEET_VISIBLE_ROWS 9      ; Visible data rows (2 tilemap rows each, rows 2-19)
+.define SHEET_ROW_HEIGHT  2       ; Tilemap rows per data row (16px tall cells)
+.define SHEET_DISP_CHARS  5       ; Display chars per cell on screen
 .define SHEET_HDR_ROW     1       ; Tilemap row for column headers
 .define SHEET_DATA_START  2       ; First tilemap row for cell data
 .define SHEET_NUM_COLS    2       ; Tile columns for row numbers (cols 0-1)
 .define SHEET_SEP_COL     2       ; Tile column for separator
 .define SHEET_DATA_COL    3       ; First tile column for cell data
-.define SHEET_COL_WIDTH   3       ; Tiles per data column
+.define SHEET_COL_WIDTH   5       ; Tiles per data column
 .define SHEET_CURSOR_TILE 60      ; Underscore tile for cell edit cursor
 
 ; --- Text document editor variables (DP $8A-$95) ---
