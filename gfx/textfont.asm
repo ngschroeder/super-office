@@ -375,18 +375,20 @@ textfont_palette:
 .dw $7FFF    ; 1: white (character color)
 .dw $294A    ; 2: dark gray (status bar / UI)
 .dw $0000    ; 3: unused
-.dw $0000    ; 4: unused
-.dw $0000    ; 5: unused
-.dw $0000    ; 6: unused
-.dw $0000    ; 7: unused
-.dw $0000    ; 8: unused
-.dw $0000    ; 9: unused
-.dw $0000    ; 10: unused
-.dw $0000    ; 11: unused
-.dw $0000    ; 12: unused
-.dw $0000    ; 13: unused
-.dw $0000    ; 14: unused
-.dw $0000    ; 15: unused
+; Colors 4-15 mirror BG3 keyboard sub-palettes 1-3 so that re-uploading
+; this palette after kbd_show doesn't clobber keyboard hover/shift/spacebar.
+.dw $0000    ; 4: transparent  (BG3 sub-pal 1: hover)
+.dw $03FF    ; 5: yellow       (hover key face)
+.dw $01AD    ; 6: dark yellow  (hover shadow)
+.dw $0000    ; 7: black        (hover text)
+.dw $0000    ; 8: transparent  (BG3 sub-pal 2: shift-active)
+.dw $7A90    ; 9: light blue   (shift key face)
+.dw $3548    ; 10: darker blue (shift shadow)
+.dw $0000    ; 11: black       (shift text)
+.dw $0000    ; 12: transparent (BG3 sub-pal 3: spacebar)
+.dw $7FFF    ; 13: white       (spacebar face)
+.dw $294A    ; 14: gray        (spacebar shadow)
+.dw $0000    ; 15: black       (spacebar text)
 textfont_palette_end:
 
 ; ============================================================================

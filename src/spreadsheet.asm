@@ -353,11 +353,14 @@ spreadsheet_init:
     ; === Show on-screen keyboard (adds BG3 to TM) ===
     jsr kbd_show
 
-    ; === Re-upload spreadsheet palettes (kbd_show overwrites CGRAM 0-23) ===
-    ; kbd_palette has 6 sub-palettes (48 bytes), clobbering our highlight palette
-    ; at CGRAM 16+. Re-upload all 3 BG1 palettes to fix.
+    ; === Re-upload BG1 palettes that kbd_show overwrites (CGRAM 0-31) ===
+    ; kbd_palette covers CGRAM 0-31 (BG3 sub-palettes 0-7).
+    ; textfont_palette now includes BG3 keyboard colors at slots 4-15,
+    ; so re-uploading it preserves both BG1 font and BG3 hover/shift/spacebar.
+    ; We do NOT re-upload sheet_pal_highlight (CGRAM 16-31) because that would
+    ; clobber BG3 sub-palettes 4-7 (save menu text/box colors).
 
-    ; Font palette → CGRAM 0-15
+    ; Font palette → CGRAM 0-15 (includes BG3 keyboard colors at 4-15)
     stz CGADD.w
     lda #$00
     sta DMAP0.w
@@ -376,23 +379,7 @@ spreadsheet_init:
     lda #$01
     sta MDMAEN.w
 
-    ; Highlight palette → CGRAM 16-31
-    lda #16
-    sta CGADD.w
-    lda #:sheet_pal_highlight
-    sta A1B0.w
-    rep #$20
-    .ACCU 16
-    lda #sheet_pal_highlight
-    sta A1T0L.w
-    lda #sheet_pal_highlight_end - sheet_pal_highlight
-    sta DAS0L.w
-    sep #$20
-    .ACCU 8
-    lda #$01
-    sta MDMAEN.w
-
-    ; Header palette → CGRAM 32-47
+    ; Header palette → CGRAM 32-47 (outside BG3 range, no conflict)
     lda #32
     sta CGADD.w
     lda #:sheet_pal_headers
