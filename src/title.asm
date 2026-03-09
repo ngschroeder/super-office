@@ -147,16 +147,10 @@ title_init:
     stz SHADOW_INIDISP.w
 
     ; === Initialize menu state — nothing selected ===
+    ; Set sel=$FF (none), prev=$00 (force arrow update on first active frame)
     lda #$FF
     sta title_menu_sel.w
-    sta title_prev_sel.w
-
-    ; Fully initialize selection arrow sprite (OAM entry 5) off-screen
-    stz OAM_BUF+20.w            ; X = 0
-    lda #$F0
-    sta OAM_BUF+21.w            ; Y = $F0 (off-screen)
-    stz OAM_BUF+22.w            ; Tile = 0
-    stz OAM_BUF+23.w            ; Attr = 0 (no flip, priority 0, palette 0)
+    stz title_prev_sel.w
 
     ; Un-force blank (brightness 0 — black but rendering active)
     stz INIDISP.w
@@ -309,45 +303,84 @@ _title_check_menu_hover:
 
 
 ; ============================================================================
-; _title_update_menu_arrow — Update selection arrow as OAM sprite entry 5
-; Uses an 8x8 sprite (tile 0 top-left = small arrow shape) positioned
-; next to the selected menu item text. No VRAM writes needed.
+; _title_update_menu_arrow — Update selection indicator via BG1 tilemap
+; Queues VRAM writes to show/hide TILE_ARROW at the arrow placeholder
+; position (col 10) on the selected menu row. Uses the NMI write queue.
 ; ============================================================================
 _title_update_menu_arrow:
     .ACCU 8
     .INDEX 8
 
+    ; --- Clear old arrow (write TILE_BLANK at previous position) ---
+    lda title_prev_sel.w
+    cmp #$FF
+    beq @no_old_arrow
+
+    ; Get queue offset: count * 4
+    pha                          ; Save prev_sel
+    lda vram_wq_count.w
+    asl A
+    asl A
+    tax
+    pla                          ; Restore prev_sel
+
+    cmp #$01
+    beq @old_row26
+    ; Old was row 24 (CREATE NEW)
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (24 * 32) + 10
+    bra @write_old
+@old_row26:
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (26 * 32) + 10
+@write_old:
+    sta vram_wq_data.w,X
+    sep #$20
+    .ACCU 8
+    lda #TILE_BLANK
+    sta vram_wq_data+2.w,X
+    lda #PAL7_HI
+    sta vram_wq_data+3.w,X
+    inc vram_wq_count.w
+
+@no_old_arrow:
+    ; --- Show new arrow (write TILE_ARROW at new position) ---
     lda title_menu_sel.w
     cmp #$FF
-    beq @hide_arrow
+    beq @done
 
-    ; Position arrow sprite next to selected menu item
-    ; OAM entry 5 = bytes 20-23 in low table
-    lda #(10 * 8)               ; X = col 10 * 8 = 80
-    sta OAM_BUF+20.w
+    ; Get queue offset: count * 4
+    pha                          ; Save menu_sel
+    lda vram_wq_count.w
+    asl A
+    asl A
+    tax
+    pla                          ; Restore menu_sel
 
-    lda title_menu_sel.w
-    beq @arrow_row0
-    lda #196                     ; Row 26 visual Y (208 - 12px scroll)
-    bra @set_arrow_y
-@arrow_row0:
-    lda #180                     ; Row 24 visual Y (192 - 12px scroll)
-@set_arrow_y:
-    sta OAM_BUF+21.w
+    cmp #$01
+    beq @new_row26
+    ; New is row 24 (CREATE NEW)
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (24 * 32) + 10
+    bra @write_new
+@new_row26:
+    rep #$20
+    .ACCU 16
+    lda #VRAM_BG1_MAP + (26 * 32) + 10
+@write_new:
+    sta vram_wq_data.w,X
+    sep #$20
+    .ACCU 8
+    lda #TILE_ARROW
+    sta vram_wq_data+2.w,X
+    lda #PAL7_HI
+    sta vram_wq_data+3.w,X
+    inc vram_wq_count.w
 
-    stz OAM_BUF+22.w            ; Tile 0 (cursor top-left = arrow shape)
-    lda #%00110000               ; Priority 3, palette 0 (white), no flip
-    sta OAM_BUF+23.w
-
-    ; High table: sprite 5 = byte 1, bits 3:2; keep small (8x8)
-    lda OAM_BUF_HI+1.w
-    and #%11110011               ; Clear sprite 5 bits (small, X<256)
-    sta OAM_BUF_HI+1.w
-    rts
-
-@hide_arrow:
-    lda #$F0                     ; Y=$F0 = off screen
-    sta OAM_BUF+21.w
+@done:
     rts
 
 
