@@ -1764,29 +1764,33 @@ state_options:
     cmp #$FF
     beq @opt_check_rclick
 
-    ; Something was clicked
+    ; Something was clicked — dispatch by opt_sel
     cmp #$00
-    bne @opt_click_vol
+    beq @opt_click_on            ; 0 = ON clicked
+    cmp #$06
+    beq @opt_click_off           ; 6 = OFF clicked
+    ; 1-5 = volume level
+    bra @opt_click_vol
 
-    ; --- Music toggle clicked ---
+@opt_click_on:
+    ; --- Turn music ON (no-op if already on) ---
     lda opt_music_on.w
-    eor #$01                     ; Toggle
+    bne @opt_done                ; Already on, skip
+    lda #$01
     sta opt_music_on.w
-    bne @opt_music_turned_on
-
-    ; Music turned OFF
-    jsr stop_music
-    bra @opt_music_redraw
-
-@opt_music_turned_on:
-    ; Music turned ON — play title music
     lda #SONG_TITLE
     jsr play_music
+    bra @opt_music_redraw
+
+@opt_click_off:
+    ; --- Turn music OFF (no-op if already off) ---
+    lda opt_music_on.w
+    beq @opt_done                ; Already off, skip
+    stz opt_music_on.w
+    jsr stop_music
 
 @opt_music_redraw:
-    lda #SFX_MENU_SEL
-    jsr play_sfx
-    ; Redraw ON/OFF labels
+    ; Redraw ON/OFF labels (no SFX — the music change IS feedback)
     lda #$8F
     sta INIDISP.w
     jsr _options_render_music_toggle
@@ -1798,8 +1802,7 @@ state_options:
     ; opt_sel = 1-5 = volume level clicked
     sta opt_volume.w
     jsr apply_volume
-    lda #SFX_MENU_SEL
-    jsr play_sfx
+    ; No SFX — avoids race condition, volume change is audible feedback
     ; Redraw volume bar
     lda #$8F
     sta INIDISP.w
@@ -1824,7 +1827,7 @@ state_options:
 
 ; ============================================================================
 ; _options_check_hover — Check cursor position against options items
-; Sets opt_sel: $FF=none, 0=music toggle area, 1-5=volume level
+; Sets opt_sel: $FF=none, 0=music ON, 6=music OFF, 1-5=volume level
 ; Assumes: 8-bit A/X/Y
 ; ============================================================================
 _options_check_hover:
@@ -1846,19 +1849,26 @@ _options_check_hover:
     cmp #112
     bcc @opt_no_sel
     cmp #128
-    bcc @opt_sel_music
+    bcc @opt_sel_on
 
     ; Check OFF area (cols 18-20, X 144-167)
     cmp #144
     bcc @opt_no_sel
     cmp #168
-    bcc @opt_sel_music
+    bcc @opt_sel_off
     bra @opt_no_sel
 
-@opt_sel_music:
+@opt_sel_on:
     sep #$20
     .ACCU 8
-    stz opt_sel.w                ; 0 = music toggle
+    stz opt_sel.w                ; 0 = music ON
+    rts
+
+@opt_sel_off:
+    sep #$20
+    .ACCU 8
+    lda #$06
+    sta opt_sel.w                ; 6 = music OFF
     rts
 
 @opt_check_vol:

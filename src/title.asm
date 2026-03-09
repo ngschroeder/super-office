@@ -245,7 +245,12 @@ state_title:
     ; Menu item clicked! Play SFX and start fade out.
     lda #SFX_MENU_SEL
     jsr play_sfx
+    ; Don't stop music for OPTIONS — it stays playing
+    lda title_menu_sel.w
+    cmp #$02
+    beq @skip_stop_music
     jsr stop_music
+@skip_stop_music:
     lda #FADE_OUT
     sta fade_dir.w
     rts
